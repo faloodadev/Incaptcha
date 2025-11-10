@@ -1,0 +1,355 @@
+Build a production-ready InCaptcha — macOS/Discord themed working prototype (developer prompt)
+
+Use this exact, copy-pasteable prompt for an LLM dev agent or give it to human devs. It describes a full, runnable working prototype that:
+
+Implements novel methods & algorithms for secure captcha (hybrid AI + behavioral + cryptographic),
+
+Ships a beautiful macOS-styled web UI (soft rounded corners, frosted-glass, subtle gloss — Apple-like) and an alternate Discord-style dark UI skin,
+
+Exposes a reusable React widget and a Discord bot module so Discord servers can embed the captcha,
+
+Uses modern 2025 stack (TypeScript, Next.js 15, tRPC, Prisma, Redis, Node 22), plus free/open AI models (CLIP, YOLOv8, SAM, MobileNet, small LSTM for behavior),
+
+Includes security layers (AES tokens, HMAC JWTs, replay protection, rate limits, honeytraps, ZK concept notes),
+
+Is accessible (WCAG) and localizable.
+
+
+Paste everything below to an AI dev agent and instruct: “Produce a runnable repo incaptcha-proto with the files, README, and a demo.”
+
+
+---
+
+Project summary (one paragraph)
+
+Build InCaptcha Prototype — an advanced, hybrid CAPTCHA system with two beautiful front-end themes (macOS/light frosted-glass and Discord/dark UI). The system serves dynamic puzzle challenges (primary: draggable puzzle + image-select 3×3 fallback). Challenges are AI-generated and verified server-side (CLIP + YOLOv8 + SAM). A behavioral LSTM model (lightweight) runs in-browser to emit a human-likeness score. Server combines signals and issues a short-lived, single-use verifyToken (HS512-signed). Provide: React widget @incaptcha/react, Next.js demo app, REST/tRPC API (/start, /solve, /verify, /admin), a Discord bot package to invite into servers and trigger captcha flows on join/command, Redis for ephemeral state, and Prisma + SQLite for dev.
+
+
+---
+
+High-level architecture
+
+Frontend (Next.js 15, TypeScript): apps/web (demo + admin). Theme switcher: macos or discord. Widget component: components/InCaptcha.tsx.
+
+Widget exports: onSuccess(verifyToken), siteKey prop, theme.
+
+Backend (tRPC + Fastify adapter or Next API routes): apps/api — endpoints for start, solve, verify, assets, admin/*.
+
+Data store: Prisma (SQLite for dev). Ephemeral state + rate-limit store: Redis (local dev: Docker).
+
+AI services:
+
+Object detection/cropping: YOLOv8 (ultralytics) (server-side).
+
+Segmentation for puzzles: SAM (server-side).
+
+Semantic verification: CLIP (server-side verification).
+
+On-device lightweight classification: MobileNet (TensorFlow.js) for client fallback & instant feedback.
+
+Behavior model: Tiny LSTM (TensorFlow.js) running in browser to output a behaviorScore (0-1).
+
+
+CDN/asset: dev uses picsum.photos or source.unsplash seeds; production: S3/Cloudinary + CDN.
+
+Optional Web3 hook: mintSBT endpoint (token reward) — stubbed.
+
+
+
+---
+
+Novel methods & algorithms (concise, implementable)
+
+1) Adaptive Hybrid Challenge (AHC)
+
+For each session, pick one of three modes: Puzzle (drag), Image-select 3×3, Pattern-match (connect-dot).
+
+Selection uses entropy-driven scheduler:
+
+Compute entropy = f(IP_risk, past_failures, site_policy)
+
+If entropy < 0.25 → invisible (no UI, rely on behavior score).
+
+Else select a visible challenge weighted by user device, locale, and accessibility flags.
+
+
+
+2) Server-side Semantic Consistency (SSC)
+
+After user submits tiles, server runs CLIP similarity: sim = CLIP(imageTiles, promptText).
+
+Run YOLO detection on tiles to ensure objects are present (secondary check).
+
+If sim < 0.68 or YOLO fails expected detection → fail.
+
+
+3) Behavior Fusion Model (BFM)
+
+Client collects pointer trace, time-to-first-click, dwell times, micro-velocity, device orientation (if mobile).
+
+Preprocess into 50-d feature vector (normalized).
+
+Send vector to a small LSTM classifier (TF.js) that outputs behaviorScore ∈ [0,1].
+
+On backend, fuse scores: finalScore = α * behaviorScore + β * clipSim + γ * deviceTrust (weights configurable; default α=0.5, β=0.4, γ=0.1). Pass threshold 0.75 to succeed.
+
+
+4) Honeytrap & Canary Challenges
+
+Embed occasional canary tiles (server-only-known answers) to detect solver farms. Solving honey incorrectly flags as suspicious and escalates to rate-limits.
+
+
+5) Token & Replay Protection
+
+challengeToken = jwt.sign({cid, exp: now+60s}, SECRET, alg=HS512)
+
+verifyToken = jwt.sign({cid, uid_hash, exp: now+180s}, SECRET, alg=HS512) — store single-use nonce in Redis to prevent replay.
+
+All tokens short-lived. All server validations require token + signature.
+
+
+6) Progressive Difficulty
+
+Start with easier puzzles; if suspicious, escalate difficulty & require multiple challenges or manual review.
+
+
+
+---
+
+UI / Design brief — macOS + Discord themes
+
+macOS theme (light, Apple-inspired)
+
+Visual language: frosted glass cards, rounded 14–20px corners, soft drop shadows, subtle noise overlay, San Francisco-like sans-serif (use Inter/Manrope).
+
+Colors: warm saffron accent for primary CTA, neutral grays, high contrast text.
+
+Microinteractions: Framer Motion smooth scaling on hover, spring physics for drag, subtle haptic-like animation on success.
+
+Iconography: 2px stroke line icons (Lucide), small rounded status indicators.
+
+
+Discord theme (dark, minimal, neon accent)
+
+Visual language: flat deep grays, neon electric-blue accent, compact spacing, monospace-like status badges.
+
+Microinteractions: quick fades, snappy tile selection feedback, confetti in a dark palette on success.
+
+Accessibility: ensure high-contrast focus states and keyboard navigation.
+
+
+Widget specifics (both themes)
+
+Header: brand logo (deliverable), prompt text (localized), timer circle (60s).
+
+Grid: 3×3 images (images lazy-loaded; selection toggles border + checkmark).
+
+Puzzle mode: draggable missing slice with magnet snap & progress bar.
+
+Fallback: audio alt + keyboard navigation; passphrase readout (WCAG).
+
+
+
+---
+
+Discord integration (exact behavior)
+
+Build a small Discord bot package packages/discord-incaptcha using Discord.js v14+ (or 2025 equivalent).
+
+Features:
+
+Slash command /verifyme — bot DM’s user a captcha widget link (or serve captcha via OAuth-less modal if using Discord interactions).
+
+On server join, optional auto-block: new user gets verificationPending role; bot DMs a captcha link; on success, bot assigns Verified role.
+
+Use short-lived challengeToken and verifyToken; bot verifies through server API.
+
+
+UX: Option to complete captcha in an in-app web modal (OAuth optional) or quick-link to widget with ?discord_user=<snowflake>&nonce=... for verification mapping.
+
+
+
+---
+
+API spec (minimal & exact)
+
+POST /api/incaptcha/start
+
+Input: { siteKey: string, theme?: "macos"|"discord", lang?: "en"|"hi", uid?: string }
+Response:
+
+{
+  "challengeId":"uuid",
+  "prompt":"Select all images with street food",
+  "images":[ "https://...", ... (9) ],
+  "challengeToken":"<jwt>",
+  "mode":"images" // or "puzzle"
+}
+
+POST /api/incaptcha/solve
+
+Input: { challengeId, challengeToken, selectedIndices:[0..8], behaviorVector:[...], clientClipHashes?:[...] }
+Server actions:
+
+verify token signature & expiry
+
+check Redis challenge store
+
+compute clipSim via CLIP on server
+
+fuse behaviorScore (server can re-evaluate or accept client tfjs score; server may recalc on sampled sessions)
+
+apply honeytrap rules
+
+if pass → create single-use verifyToken and return success
+
+
+Response:
+
+{ "success": true, "verifyToken":"<jwt>", "score":0.87 }
+
+POST /api/incaptcha/verify
+
+Input: { verifyToken }
+Output: { valid: true, siteKey, timestamp, score } or { valid:false }
+
+GET /api/incaptcha/assets?category=street_food
+
+Return sample seeds/metadata for builder.
+
+
+---
+
+Dataset & assets
+
+Seed dev dataset using picsum.photos + curated Indian images from royalty-free sources (Unsplash, Pexels). Tag assets with categories: street_food, temple, yellow_bus, rangoli, etc.
+
+For production, build a large diversified dataset; use SAM/YOLov8 to programmatically generate many crops & masks to expand variations.
+
+Metadata store: JSON lines with {id, url, categories[], localeTags[], safeForKids:true/false}.
+
+
+
+---
+
+Security & infra (practical)
+
+Secrets: INCAPTCHA_SECRET (HS512) in ENV; rotate monthly.
+
+Rate limiting: Redis counters + sliding window. Default 10 starts/IP/min, 3 solves/min.
+
+Monitoring: Log solves/fails to analytics (PostHog/Prometheus). Alert on unusual solve spikes.
+
+Honeytrap: randomly 0.5% of challenges are canaries.
+
+Optional ZK note: for future, produce zkSNARK that proves challenge solved client-side without revealing answer — include placeholder for zk.generateProof().
+
+
+
+---
+
+Accessibility & Localization
+
+ARIA roles on grid, keyboard nav (arrow keys to move focus, space to toggle), visually hidden prompt text for screen readers.
+
+Audio fallback with short synthesized prompts and alternative input.
+
+i18n JSON for en, hi, ta, bn, es, etc.
+
+
+
+---
+
+Developer deliverables (exact files & structure)
+
+Produce a runnable repo incaptcha-proto with:
+
+/incaptcha-proto
+  /apps/web (Next.js 15 TS)
+    /components/InCaptcha.tsx
+    /pages/demo.tsx
+    /pages/admin.tsx
+    /styles/theme-macos.css
+    /styles/theme-discord.css
+  /apps/api (tRPC or Next API routes)
+    /routes/incaptcha.ts
+    /lib/ai/clipService.ts
+    /lib/ai/yoloService.py (or node wrapper)
+    /lib/behavior/lstm_model_tfjs.js
+    /lib/security/tokens.ts
+  /packages/discord-incaptcha
+    index.ts (discord bot)
+    README.md (setup)
+  prisma/schema.prisma
+  docker-compose.yml (redis, localstack optional)
+  README.md (setup + curl examples + acceptance tests)
+  scripts/
+    seed_assets.ts
+    run_models.sh (download model weights for dev)
+
+Include setup scripts and pnpm dev instructions; default dev runs all services locally.
+
+
+---
+
+Acceptance tests (must pass)
+
+1. GET /api/incaptcha/start?siteKey=test returns images + challengeToken.
+
+
+2. Client displays macOS theme widget; user can select indices with keyboard + mouse.
+
+
+3. Submit correct indices + legit behaviorVector → server returns verifyToken.
+
+
+4. POST /api/incaptcha/verify with that verifyToken returns valid:true.
+
+
+5. Using expired challengeToken returns 401.
+
+
+6. Reusing verifyToken returns invalid on second call.
+
+
+7. Honeytrap challenge solved incorrectly raises suspicious flag in admin logs.
+
+
+8. Discord bot flow: /verifyme DM with captcha link, completing it grants role (simulate).
+
+
+
+
+---
+
+Code-style & versions
+
+TypeScript strict mode; ESLint + Prettier config.
+
+Node 22, pnpm, Next.js 15, Prisma 4/6, Redis latest stable.
+
+Provide minimal pretrained model weights or scripts to download (YOLOv8n, MobileNet TFJS, CLIP via Hugging Face).
+
+
+
+---
+
+Final prompt for the AI dev agent (copy/paste)
+
+> Build a runnable repository incaptcha-proto that implements the specification above. Use Next.js 15 + TypeScript for frontend, tRPC/Next API for backend, Prisma + SQLite for dev, Redis for ephemeral state and rate-limits, and include a Discord bot package. Implement the Adaptive Hybrid Challenge, Server-side Semantic Consistency, and Behavior Fusion Model exactly as specified. Provide clear README, dev scripts, and acceptance test scripts. For AI services use open-source models: YOLOv8 (detection), SAM (segmentation), CLIP (semantic similarity), MobileNet TFJS (client fallback). The UI must have two themes: macos (frosted glass) and discord (dark). Include an /admin page to observe suspicious events. Keep everything runnable locally with pnpm install && pnpm dev. Document how to replace dev image seeds with a production CDN.
+
+
+
+
+---
+
+If you want, I’ll now:
+
+1. Generate the full repo scaffold (server files, React widget, Discord bot stub, model download scripts, README) as text you can copy — say “Yes, scaffold code”.
+
+
+2. Or I can produce only the InCaptcha widget code (single-file React TypeScript component) and the minimal backend incaptcha API in Node — say “Yes, widget + API”.
+
+
+
+Which do you want me to generate right now?
