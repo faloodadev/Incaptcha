@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, Loader2, AlertCircle } from 'lucide-react';
+import { Shield, Loader2, AlertCircle, Sparkles } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Timer } from './Timer';
 import { ImageSelectMode } from './ImageSelectMode';
@@ -141,151 +141,223 @@ export function InCaptchaWidget({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+      initial={{ opacity: 0, y: 20, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ 
+        type: 'spring', 
+        stiffness: 300, 
+        damping: 30,
+        opacity: { duration: 0.3 }
+      }}
       className="w-full max-w-md mx-auto"
       data-testid="incaptcha-widget"
     >
-      <Card className={`relative overflow-hidden ${
-        theme === 'macos' 
-          ? 'bg-card/80 backdrop-blur-xl border-card-border shadow-lg' 
-          : 'bg-card border-card-border shadow-md'
-      }`}>
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <Shield className="w-6 h-6 text-primary" strokeWidth={2} />
-              {theme === 'macos' && (
-                <motion.div
-                  className="absolute inset-0 bg-primary/20 rounded-full blur-md"
-                  animate={{ opacity: [0.3, 0.6, 0.3] }}
-                  transition={{ repeat: Infinity, duration: 2 }}
-                />
-              )}
-            </div>
-            <div>
-              <h2 className="text-sm font-semibold text-foreground">InCaptcha</h2>
-              <p className="text-xs text-muted-foreground">Human Verification</p>
-            </div>
+      <div className="relative holo-border-animated rounded-xl overflow-hidden shadow-2xl">
+        <Card className="relative overflow-hidden border-0 glass-strong backdrop-blur-2xl">
+          {/* Ambient Background Glow */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div className="absolute -top-1/2 -right-1/2 w-full h-full bg-gradient-to-br from-primary/10 via-transparent to-secondary/10 blur-3xl opacity-50 animate-pulse" />
+            <div className="absolute -bottom-1/2 -left-1/2 w-full h-full bg-gradient-to-tr from-secondary/10 via-transparent to-primary/10 blur-3xl opacity-50 animate-pulse" style={{ animationDelay: '1s' }} />
           </div>
 
-          {state === 'challenge' && challenge && (
-            <Timer duration={60} onExpire={handleExpire} />
-          )}
-        </div>
-
-        {/* Content */}
-        <div className="p-6 min-h-[400px] flex items-center justify-center">
-          <AnimatePresence mode="wait">
-            {state === 'loading' && (
-              <motion.div
-                key="loading"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="flex flex-col items-center gap-4"
+          {/* Header with Glassmorphism */}
+          <div className="relative flex items-center justify-between p-4 border-b border-white/10">
+            <div className="flex items-center gap-3">
+              <motion.div 
+                className="relative"
+                animate={{ rotate: [0, 5, -5, 0] }}
+                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
               >
-                <Loader2 className="w-12 h-12 text-primary animate-spin" />
-                <p className="text-sm text-muted-foreground">Loading challenge...</p>
+                <div className="absolute inset-0 bg-gradient-to-br from-primary to-secondary rounded-lg blur-lg opacity-50" />
+                <div className="relative bg-gradient-to-br from-primary to-secondary p-2 rounded-lg">
+                  <Shield className="w-5 h-5 text-white" strokeWidth={2.5} />
+                </div>
               </motion.div>
-            )}
+              <div>
+                <h2 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                  InCaptcha
+                  <Sparkles className="w-3.5 h-3.5 text-primary" />
+                </h2>
+                <p className="text-xs text-muted-foreground">AI-Powered Verification</p>
+              </div>
+            </div>
 
             {state === 'challenge' && challenge && (
-              <motion.div
-                key="challenge"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="w-full"
-              >
-                {challenge.mode === 'images' ? (
-                  <ImageSelectMode
-                    images={challenge.images}
-                    prompt={challenge.prompt}
-                    onSubmit={handleSubmit}
-                    disabled={state === 'verifying'}
-                  />
-                ) : challenge.puzzleData ? (
-                  <PuzzleMode
-                    backgroundImage={challenge.puzzleData.backgroundImage}
-                    puzzlePiece={challenge.puzzleData.puzzlePiece}
-                    correctX={challenge.puzzleData.correctX}
-                    correctY={challenge.puzzleData.correctY}
-                    onSubmit={handlePuzzleSubmit}
-                    disabled={state === 'verifying'}
-                  />
-                ) : (
-                  <div className="text-center text-muted-foreground">
-                    <p>Invalid challenge mode</p>
-                  </div>
-                )}
-              </motion.div>
+              <Timer duration={60} onExpire={handleExpire} />
             )}
+          </div>
 
-            {state === 'verifying' && (
-              <motion.div
-                key="verifying"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="flex flex-col items-center gap-4"
-              >
-                <Loader2 className="w-12 h-12 text-primary animate-spin" />
-                <p className="text-sm text-muted-foreground">Verifying your response...</p>
-              </motion.div>
-            )}
-
-            {state === 'success' && (
-              <motion.div
-                key="success"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-              >
-                <SuccessAnimation score={successScore} />
-              </motion.div>
-            )}
-
-            {state === 'error' && (
-              <motion.div
-                key="error"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="flex flex-col items-center gap-4 text-center"
-              >
-                <AlertCircle className="w-12 h-12 text-destructive" />
-                <div>
-                  <h3 className="text-base font-semibold text-foreground mb-1">
-                    Verification Failed
-                  </h3>
-                  <p className="text-sm text-muted-foreground">{errorMessage}</p>
-                </div>
-                <button
-                  onClick={handleRetry}
-                  className="px-4 py-2 bg-primary text-primary-foreground rounded-md font-medium hover-elevate active-elevate-2 mt-2"
-                  data-testid="button-retry"
+          {/* Content with Smooth Transitions */}
+          <div className="relative p-6 min-h-[420px] flex items-center justify-center">
+            <AnimatePresence mode="wait">
+              {state === 'loading' && (
+                <motion.div
+                  key="loading"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  transition={{ duration: 0.3 }}
+                  className="flex flex-col items-center gap-4"
                 >
-                  Try Again
-                </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                    className="relative"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-primary to-secondary rounded-full blur-md opacity-50" />
+                    <Loader2 className="relative w-12 h-12 text-primary" />
+                  </motion.div>
+                  <motion.p 
+                    className="text-sm text-muted-foreground"
+                    animate={{ opacity: [0.5, 1, 0.5] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  >
+                    Initializing verification...
+                  </motion.p>
+                </motion.div>
+              )}
 
-        {/* Footer */}
-        <div className="px-4 py-3 border-t border-border bg-muted/30">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>Protected by InCaptcha</span>
-            <div className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-              <span>Secure</span>
+              {state === 'challenge' && challenge && (
+                <motion.div
+                  key="challenge"
+                  initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                  transition={{ 
+                    type: 'spring', 
+                    stiffness: 300, 
+                    damping: 25,
+                    opacity: { duration: 0.2 }
+                  }}
+                  className="w-full"
+                >
+                  {challenge.mode === 'images' ? (
+                    <ImageSelectMode
+                      images={challenge.images}
+                      prompt={challenge.prompt}
+                      onSubmit={handleSubmit}
+                      disabled={state === 'verifying'}
+                    />
+                  ) : challenge.puzzleData ? (
+                    <PuzzleMode
+                      backgroundImage={challenge.puzzleData.backgroundImage}
+                      puzzlePiece={challenge.puzzleData.puzzlePiece}
+                      correctX={challenge.puzzleData.correctX}
+                      correctY={challenge.puzzleData.correctY}
+                      onSubmit={handlePuzzleSubmit}
+                      disabled={state === 'verifying'}
+                    />
+                  ) : (
+                    <div className="text-center text-muted-foreground">
+                      <p>Invalid challenge mode</p>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+
+              {state === 'verifying' && (
+                <motion.div
+                  key="verifying"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  transition={{ duration: 0.3 }}
+                  className="flex flex-col items-center gap-4"
+                >
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                    className="relative"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-primary via-secondary to-primary rounded-full blur-lg opacity-60" />
+                    <Loader2 className="relative w-12 h-12 text-primary" />
+                  </motion.div>
+                  <motion.div className="text-center">
+                    <motion.p 
+                      className="text-sm font-medium text-foreground mb-1"
+                      animate={{ opacity: [0.5, 1, 0.5] }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
+                    >
+                      Analyzing response...
+                    </motion.p>
+                    <p className="text-xs text-muted-foreground">AI verification in progress</p>
+                  </motion.div>
+                </motion.div>
+              )}
+
+              {state === 'success' && (
+                <motion.div
+                  key="success"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ 
+                    type: 'spring', 
+                    stiffness: 400, 
+                    damping: 20 
+                  }}
+                >
+                  <SuccessAnimation score={successScore} />
+                </motion.div>
+              )}
+
+              {state === 'error' && (
+                <motion.div
+                  key="error"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.3 }}
+                  className="flex flex-col items-center gap-4 text-center"
+                >
+                  <motion.div
+                    animate={{ scale: [1, 1.05, 1] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                    className="relative"
+                  >
+                    <div className="absolute inset-0 bg-destructive/20 rounded-full blur-xl" />
+                    <AlertCircle className="relative w-12 h-12 text-destructive" />
+                  </motion.div>
+                  <div>
+                    <h3 className="text-base font-semibold text-foreground mb-1">
+                      Verification Failed
+                    </h3>
+                    <p className="text-sm text-muted-foreground">{errorMessage}</p>
+                  </div>
+                  <motion.button
+                    onClick={handleRetry}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="relative px-6 py-2.5 bg-gradient-to-r from-primary to-secondary text-white rounded-lg font-medium shadow-lg overflow-hidden group mt-2"
+                    data-testid="button-retry"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-secondary to-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    <span className="relative">Try Again</span>
+                  </motion.button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Footer with Holographic Accent */}
+          <div className="relative px-4 py-3 border-t border-white/10 bg-gradient-to-r from-primary/5 via-transparent to-secondary/5">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground flex items-center gap-1.5">
+                <span>Protected by</span>
+                <span className="gradient-text font-semibold">InCaptcha</span>
+              </span>
+              <div className="flex items-center gap-1.5">
+                <motion.div
+                  animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                  className="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-primary to-secondary"
+                />
+                <span className="text-primary font-medium">Secure</span>
+              </div>
             </div>
           </div>
-        </div>
-      </Card>
+        </Card>
+      </div>
     </motion.div>
   );
 }
