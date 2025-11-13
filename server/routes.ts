@@ -281,17 +281,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const success = finalScore >= 60; // Lower threshold for checkbox
 
       if (success) {
-        // Generate verify token
+        // Generate a single consistent ID for this verification
+        const challengeId = 'turnstile_' + nanoid();
+        
+        // Generate verify token with the challengeId
         const verifyToken = generateVerifyToken(
-          nanoid(),
+          challengeId,
           site.key,
           finalScore
         );
 
-        // Store verify token
+        // Store verify token (one token per verification)
         await storage.createVerifyToken({
           token: verifyToken,
-          challengeId: 'turnstile_' + nanoid(),
+          challengeId: challengeId,
           siteKey: site.key,
           score: finalScore,
           used: false,

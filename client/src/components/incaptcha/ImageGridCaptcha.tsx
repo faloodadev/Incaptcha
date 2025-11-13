@@ -63,6 +63,7 @@ export function ImageGridCaptcha({ onSuccess, onError, siteKey = 'demo_site_key'
   });
 
   const toggleSelection = useCallback((index: number) => {
+    // Only allow selection during challenge state
     if (state !== 'challenge') return;
     
     setSelectedIndices(prev => {
@@ -75,6 +76,12 @@ export function ImageGridCaptcha({ onSuccess, onError, siteKey = 'demo_site_key'
       return newSet;
     });
   }, [state]);
+
+  // Check if buttons should be disabled
+  const isLoading = state === 'loading';
+  const isVerifying = state === 'verifying';
+  const isSuccess = state === 'success';
+  const isLocked = isLoading || isVerifying || isSuccess;
 
   const handleVerify = useCallback(() => {
     if (!challenge || state !== 'challenge') return;
@@ -243,8 +250,15 @@ export function ImageGridCaptcha({ onSuccess, onError, siteKey = 'demo_site_key'
       <div className="bg-[#f9fafb] dark:bg-card border-t border-[#e5e7eb] dark:border-border px-3 py-2.5 flex items-center justify-between">
         <div className="flex items-center gap-1">
           <button 
-            className="px-2 py-0.5 text-xs font-medium text-[#1f2937] dark:text-foreground hover:bg-[#e5e7eb] dark:hover:bg-muted rounded flex items-center gap-0.5"
+            disabled={isLocked}
+            className={`
+              px-2 py-0.5 text-xs font-medium text-[#1f2937] dark:text-foreground 
+              rounded flex items-center gap-0.5 transition-colors
+              ${!isLocked ? 'hover:bg-[#e5e7eb] dark:hover:bg-muted cursor-pointer' : 'opacity-50 cursor-not-allowed'}
+            `}
+            onClick={(e) => e.preventDefault()}
             data-testid="button-language"
+            title="Change language"
           >
             EN
             <ChevronDown className="w-3 h-3" />
@@ -254,17 +268,24 @@ export function ImageGridCaptcha({ onSuccess, onError, siteKey = 'demo_site_key'
         <div className="flex items-center gap-1.5">
           <button
             onClick={handleRefresh}
-            disabled={state === 'verifying'}
-            className="p-1.5 hover:bg-[#e5e7eb] dark:hover:bg-muted rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={isLocked}
+            className={`
+              p-1.5 rounded transition-colors
+              ${!isLocked ? 'hover:bg-[#e5e7eb] dark:hover:bg-muted cursor-pointer' : 'opacity-50 cursor-not-allowed'}
+            `}
             data-testid="button-refresh"
             title="Get new challenge"
           >
-            <RefreshCw className="w-4 h-4 text-[#1f2937] dark:text-foreground" />
+            <RefreshCw className={`w-4 h-4 text-[#1f2937] dark:text-foreground ${isVerifying ? 'animate-spin' : ''}`} />
           </button>
           
           <button
-            disabled={state !== 'challenge'}
-            className="p-1.5 hover:bg-[#e5e7eb] dark:hover:bg-muted rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={isLocked}
+            className={`
+              p-1.5 rounded transition-colors
+              ${!isLocked ? 'hover:bg-[#e5e7eb] dark:hover:bg-muted cursor-pointer' : 'opacity-50 cursor-not-allowed'}
+            `}
+            onClick={(e) => e.preventDefault()}
             data-testid="button-audio"
             title="Audio challenge"
           >
@@ -275,7 +296,11 @@ export function ImageGridCaptcha({ onSuccess, onError, siteKey = 'demo_site_key'
             <button
               onClick={handleVerify}
               disabled={state !== 'challenge'}
-              className="ml-2 px-3 py-1 bg-[#4a8af4] text-white text-sm font-medium rounded hover:bg-[#3a7ae4] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className={`
+                ml-2 px-3 py-1 bg-[#4a8af4] text-white text-sm font-medium rounded 
+                transition-colors
+                ${state === 'challenge' ? 'hover:bg-[#3a7ae4] cursor-pointer' : 'opacity-50 cursor-not-allowed'}
+              `}
               data-testid="button-verify"
             >
               Verify
@@ -284,7 +309,11 @@ export function ImageGridCaptcha({ onSuccess, onError, siteKey = 'demo_site_key'
             <button
               onClick={handleSkip}
               disabled={state !== 'challenge'}
-              className="ml-2 px-3 py-1 bg-[#4a8af4] text-white text-sm font-medium rounded hover:bg-[#3a7ae4] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className={`
+                ml-2 px-3 py-1 bg-[#4a8af4] text-white text-sm font-medium rounded 
+                transition-colors
+                ${state === 'challenge' ? 'hover:bg-[#3a7ae4] cursor-pointer' : 'opacity-50 cursor-not-allowed'}
+              `}
               data-testid="button-skip"
             >
               Skip
