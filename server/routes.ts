@@ -248,6 +248,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // POST /api/incaptcha/turnstile/verify - Simplified Turnstile-style verification
+  app.post('/api/incaptcha/turnstile/verify', async (req, res) => {
+    try {
+      const { siteKey, behaviorVector } = req.body;
+      const ipAddress = getClientIp(req);
+
+      // Check rate limit
+      const rateLimit = await checkRateLimit(ipAddress, 'solve');
+      if (!rateLimit.allowed) {
+        return res.status(429).json({
+          success: false,
+          error: 'Too many verification attempts. Please try again later.',
+        });
+      }
+
+      // Validate site key
+      const site = await storage.getSiteKey(siteKey || 'demo_site_key');
+      if (!site || !site.active) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid site key',
+        });
+      }
+
+      // Calculate behavior score (simpler verification)
+      const behaviorScore = calculateBehaviorScore(behaviorVector);
+      const deviceTrustScore = calculateDeviceTrustScore(req.headers['user-agent'] || '', ipAddress);
+      
+      // Simple fusion for Turnstile-style verification
+      const finalScore = Math.round((behaviorScore * 0.5) + (deviceTrustScore * 0.5));
+      const success = finalScore >= 60; // Lower threshold for checkbox
+
+      if (success) {
+        // Generate verify token
+        const verifyToken = generateVerifyToken(
+          nanoid(),
+          site.key,
+          finalScore
+        );
+
+        // Store verify token
+        await storage.createVerifyToken({
+          token: verifyToken,
+          challengeId: 'turnstile_' + nanoid(),
+          siteKey: site.key,
+          score: finalScore,
+          used: false,
+          expiresAt: new Date(Date.now() + 180000), // 180 seconds
+        });
+
+        return res.json({
+          success: true,
+          verifyToken,
+          score: finalScore,
+        });
+      } else {
+        return res.json({
+          success: false,
+          message: 'Verification failed. Please try again.',
+        });
+      }
+    } catch (error) {
+      console.error('Error in /api/incaptcha/turnstile/verify:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to process verification',
+      });
+    }
+  });
+
   // POST /api/incaptcha/verify - Verify a token
   app.post('/api/incaptcha/verify', async (req, res) => {
     try {

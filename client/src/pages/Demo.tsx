@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { InCaptchaWidget } from '@/components/incaptcha/InCaptchaWidget';
+import { TurnstileCheckbox } from '@/components/incaptcha/TurnstileCheckbox';
+import { ImageGridCaptcha } from '@/components/incaptcha/ImageGridCaptcha';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Card } from '@/components/ui/card';
@@ -169,20 +171,74 @@ export default function Demo() {
           </motion.div>
         </motion.div>
 
-        {/* Widget Demo Section */}
+        {/* Professional CAPTCHA Demo Section */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5, duration: 0.6 }}
-          className="max-w-2xl mx-auto mb-16"
+          className="max-w-5xl mx-auto mb-16"
         >
-          {showWidget && (
-            <InCaptchaWidget
-              siteKey="demo_site_key"
-              onSuccess={handleSuccess}
-              onError={handleError}
-            />
-          )}
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold mb-2">
+              <span className="gradient-text">Professional CAPTCHA Verification</span>
+            </h2>
+            <p className="text-muted-foreground">
+              Industry-standard designs with advanced AI verification
+            </p>
+          </div>
+
+          {/* Two CAPTCHA Types Side-by-Side */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+            {/* Turnstile Checkbox */}
+            <div className="flex flex-col items-center">
+              <h3 className="text-lg font-semibold mb-4 text-foreground">Turnstile Checkbox</h3>
+              <div className="bg-[#e8ebef] dark:bg-card/30 rounded-lg p-6 inline-block">
+                <div className="text-sm text-muted-foreground mb-4 max-w-xs text-center">
+                  Before you proceed, please complete the captcha below.
+                </div>
+                <TurnstileCheckbox
+                  siteKey="demo_site_key"
+                  onSuccess={handleSuccess}
+                  onError={handleError}
+                />
+              </div>
+            </div>
+
+            {/* Image Grid CAPTCHA */}
+            <div className="flex flex-col items-center">
+              <h3 className="text-lg font-semibold mb-4 text-foreground">Image Grid CAPTCHA</h3>
+              <div className="bg-[#e8ebef] dark:bg-card/30 rounded-lg p-6 inline-block">
+                <div className="text-sm text-muted-foreground mb-4 max-w-xs text-center">
+                  Before you proceed, please complete the captcha below.
+                </div>
+                <ImageGridCaptcha
+                  siteKey="demo_site_key"
+                  onSuccess={handleSuccess}
+                  onError={handleError}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Original Holographic Widget */}
+          <div className="text-center mb-6">
+            <h3 className="text-xl font-semibold mb-3">
+              <span className="gradient-text">Advanced AI-Powered Widget</span>
+            </h3>
+            <p className="text-muted-foreground text-sm">
+              Futuristic holographic design with behavioral analysis
+            </p>
+          </div>
+          
+          <div className="max-w-2xl mx-auto">
+            {showWidget && (
+              <InCaptchaWidget
+                siteKey="demo_site_key"
+                onSuccess={handleSuccess}
+                onError={handleError}
+              />
+            )}
+          </div>
 
           {/* Result Display with Holographic Effect */}
           {verifyToken && (
@@ -190,7 +246,7 @@ export default function Demo() {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-              className="mt-8"
+              className="mt-8 max-w-2xl mx-auto"
             >
               <div className="relative holo-border rounded-xl overflow-hidden">
                 <Card className="relative border-0 glass-strong p-6">
