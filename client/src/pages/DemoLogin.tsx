@@ -13,7 +13,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckboxCaptcha } from "@/components/CheckboxCaptcha";
+import { TurnstileCheckbox } from "@/components/incaptcha/TurnstileCheckbox";
 import { useToast } from "@/hooks/use-toast";
 import { CheckCircle, Lock, Mail, ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
@@ -56,17 +56,17 @@ export default function DemoLogin() {
     setIsLoggedIn(true);
   };
 
-  const handleCaptchaVerify = (token: string) => {
+  const handleSuccess = (token: string) => {
     setVerifyToken(token);
     toast({
-      title: "Captcha Verified",
+      title: "Verification Successful",
       description: "You can now proceed with login",
     });
   };
 
-  const handleCaptchaError = (error: string) => {
+  const handleError = (error: string) => {
     toast({
-      title: "Captcha Error",
+      title: "Verification Error",
       description: error,
       variant: "destructive",
     });
@@ -187,10 +187,10 @@ export default function DemoLogin() {
                 />
 
                 <div className="pt-2">
-                  <CheckboxCaptcha
+                  <TurnstileCheckbox
                     siteKey="demo_site_key"
-                    onVerify={handleCaptchaVerify}
-                    onError={handleCaptchaError}
+                    onSuccess={handleSuccess}
+                    onError={handleError}
                   />
                 </div>
 
