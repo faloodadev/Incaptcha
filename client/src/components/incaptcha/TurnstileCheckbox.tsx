@@ -4,6 +4,21 @@ import { Check, Loader2, AlertCircle } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 
+interface MouseSample {
+  t: number;
+  x: number;
+  y: number;
+}
+
+interface BehaviorVector {
+  mouseTrajectory: MouseSample[];
+  clickLatency: number;
+  hoverDuration: number;
+  mouseVelocity: number;
+  timestamp: number;
+  scrollBehavior: { scrollY: number; scrollVelocity: number };
+}
+
 interface TurnstileCheckboxProps {
   onSuccess?: (verifyToken: string) => void;
   onError?: (error: string) => void;
@@ -13,13 +28,59 @@ interface TurnstileCheckboxProps {
 export function TurnstileCheckbox({ onSuccess, onError, siteKey = 'demo_site_key' }: TurnstileCheckboxProps) {
   const [state, setState] = useState<'idle' | 'prechecked' | 'verifying' | 'success' | 'error'>('idle');
   const resetTimerRef = useRef<number | null>(null);
+  
+  // Behavioral tracking
+  const mouseTrajectory = useRef<MouseSample[]>([]);
+  const hoverStartTime = useRef<number>(0);
+  const pageLoadTime = useRef<number>(Date.now());
+  const checkboxRef = useRef<HTMLDivElement>(null);
+  const lastScrollY = useRef<number>(window.scrollY);
+  const lastScrollTime = useRef<number>(Date.now());
+
+  // Calculate behavioral metrics
+  const getBehaviorVector = useCallback((): BehaviorVector => {
+    const now = Date.now();
+    const scrollVelocity = lastScrollTime.current > 0 
+      ? (window.scrollY - lastScrollY.current) / ((now - lastScrollTime.current) / 1000)
+      : 0;
+    
+    // Calculate average mouse velocity
+    let totalVelocity = 0;
+    for (let i = 1; i < mouseTrajectory.current.length; i++) {
+      const prev = mouseTrajectory.current[i - 1];
+      const curr = mouseTrajectory.current[i];
+      const dx = curr.x - prev.x;
+      const dy = curr.y - prev.y;
+      const dt = (curr.t - prev.t) / 1000; // seconds
+      if (dt > 0) {
+        const velocity = Math.sqrt(dx * dx + dy * dy) / dt;
+        totalVelocity += velocity;
+      }
+    }
+    const avgVelocity = mouseTrajectory.current.length > 1 
+      ? totalVelocity / (mouseTrajectory.current.length - 1) 
+      : 0;
+
+    return {
+      mouseTrajectory: mouseTrajectory.current.slice(-20), // Last 20 samples
+      clickLatency: now - pageLoadTime.current,
+      hoverDuration: hoverStartTime.current > 0 ? now - hoverStartTime.current : 0,
+      mouseVelocity: avgVelocity,
+      timestamp: now,
+      scrollBehavior: {
+        scrollY: window.scrollY,
+        scrollVelocity: scrollVelocity
+      }
+    };
+  }, []);
 
   // Verification mutation
   const verifyMutation = useMutation({
     mutationFn: async () => {
+      const behaviorVector = getBehaviorVector();
       return apiRequest<{ success: boolean; verifyToken?: string }>('POST', '/api/incaptcha/turnstile/verify', {
         siteKey,
-        behaviorVector: {},
+        behaviorVector,
       });
     },
     onSuccess: (data) => {
@@ -44,6 +105,41 @@ export function TurnstileCheckbox({ onSuccess, onError, siteKey = 'demo_site_key
       }, 2000);
     },
   });
+
+  // Mouse tracking
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    const now = Date.now();
+    mouseTrajectory.current.push({
+      t: now,
+      x: e.clientX,
+      y: e.clientY
+    });
+    
+    // Keep only last 50 samples to avoid memory issues
+    if (mouseTrajectory.current.length > 50) {
+      mouseTrajectory.current = mouseTrajectory.current.slice(-50);
+    }
+  }, []);
+
+  const handleMouseEnter = useCallback(() => {
+    hoverStartTime.current = Date.now();
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    hoverStartTime.current = 0;
+  }, []);
+
+  // Scroll tracking
+  useEffect(() => {
+    const handleScroll = () => {
+      const now = Date.now();
+      lastScrollY.current = window.scrollY;
+      lastScrollTime.current = now;
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Cleanup timer on unmount
   useEffect(() => {
@@ -73,7 +169,13 @@ export function TurnstileCheckbox({ onSuccess, onError, siteKey = 'demo_site_key
   }, [state, verifyMutation]);
 
   return (
-    <div className="w-full max-w-[300px] bg-[#f9fafb] dark:bg-card border border-[#d4d9e3] dark:border-border rounded shadow-sm">
+    <div 
+      ref={checkboxRef}
+      className="w-full max-w-[300px] bg-[#f9fafb] dark:bg-card border border-[#d4d9e3] dark:border-border rounded shadow-sm"
+      onMouseMove={handleMouseMove}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
       <div className="p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -149,7 +251,7 @@ export function TurnstileCheckbox({ onSuccess, onError, siteKey = 'demo_site_key
             </span>
           </div>
 
-          {/* Brand Logomark */}
+          {/* InCaptcha Logo */}
           <div className="flex-shrink-0">
             <motion.div
               animate={
@@ -163,11 +265,11 @@ export function TurnstileCheckbox({ onSuccess, onError, siteKey = 'demo_site_key
                   : { duration: 0.3 }
               }
             >
-              <svg width="20" height="20" viewBox="0 0 12 12" fill="none">
-                <rect width="12" height="12" rx="2" fill="#4b7cf5" opacity="0.15" />
-                <path d="M0 0 L12 12 L12 0 Z" fill="#4b7cf5" opacity="0.8" />
-                <path d="M0 12 L12 12 L0 0 Z" fill="#2cb77d" opacity="0.8" />
-              </svg>
+              <img 
+                src="/incaptcha.png" 
+                alt="InCaptcha" 
+                className="h-5 w-auto opacity-60"
+              />
             </motion.div>
           </div>
         </div>
@@ -193,11 +295,11 @@ export function TurnstileCheckbox({ onSuccess, onError, siteKey = 'demo_site_key
           </button>
         </div>
         <div className="flex items-center gap-1.5">
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-            <rect width="12" height="12" rx="2" fill="#4a5466" opacity="0.15" />
-            <path d="M0 0 L12 12 L12 0 Z" fill="#4b7cf5" />
-            <path d="M0 12 L12 12 L0 0 Z" fill="#2cb77d" />
-          </svg>
+          <img 
+            src="/incaptcha.png" 
+            alt="InCaptcha" 
+            className="h-3 w-auto opacity-50"
+          />
           <span className="text-[11px] font-medium text-[#4a5466] dark:text-muted-foreground">
             InCaptcha
           </span>
