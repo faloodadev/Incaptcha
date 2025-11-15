@@ -4,7 +4,7 @@ import { TurnstileCheckbox } from '@/components/incaptcha/TurnstileCheckbox';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { Card } from '@/components/ui/card';
 import { Link } from 'wouter';
-import { Menu, Shield, Zap, Brain, Lock } from 'lucide-react';
+import { Menu, Shield, Zap, Brain, Lock, Key } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export default function Demo() {
@@ -39,13 +39,13 @@ export default function Demo() {
               </Link>
               
               <nav className="hidden md:flex items-center gap-1">
-                <Link href="/">
-                  <Button variant="ghost" size="sm" data-testid="link-home">
+                <Link href="/docs">
+                  <Button variant="ghost" size="sm" data-testid="link-docs">
                     Docs
                   </Button>
                 </Link>
-                <Link href="/admin">
-                  <Button variant="ghost" size="sm" data-testid="link-admin">
+                <Link href="/api-reference">
+                  <Button variant="ghost" size="sm" data-testid="link-api">
                     API
                   </Button>
                 </Link>
@@ -53,6 +53,12 @@ export default function Demo() {
             </div>
             
             <div className="flex items-center gap-2">
+              <Link href="/keys">
+                <Button variant="outline" size="sm" data-testid="button-api-keys">
+                  <Key className="w-4 h-4 mr-2" />
+                  API Keys
+                </Button>
+              </Link>
               <ThemeToggle />
               <Button variant="ghost" size="sm" className="md:hidden" data-testid="button-menu">
                 <Menu className="w-5 h-5" />
