@@ -297,42 +297,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Simple fusion for Turnstile-style verification
       const finalScore = Math.round((behaviorScore * 0.5) + (deviceTrustScore * 0.5));
-      const success = finalScore >= 60; // Lower threshold for checkbox
-
-      if (success) {
-        // Generate a single consistent ID for this verification
-        const challengeId = 'turnstile_' + nanoid();
-        
-        // Generate secure Ed25519 JWT token
-        const { generateSecureVerifyToken } = await import('./crypto');
-        const verifyToken = await generateSecureVerifyToken(
-          challengeId,
-          site.key,
-          finalScore,
-          site.secretKey
-        );
-
-        // Store verify token (one token per verification)
-        await storage.createVerifyToken({
-          token: verifyToken,
-          challengeId: challengeId,
-          siteKey: site.key,
-          score: finalScore,
-          used: false,
-          expiresAt: new Date(Date.now() + 120000), // 2 minutes (120 seconds)
-        });
-
-        return res.json({
-          success: true,
-          verifyToken,
-          score: finalScore,
-        });
-      } else {
+      
+      // Risk-based challenge escalation
+      // If score is between 40-60, require jigsaw puzzle challenge
+      // If score is below 40, likely bot - fail immediately
+      const RISK_THRESHOLD_HIGH = 40; // Below this = fail
+      const RISK_THRESHOLD_MEDIUM = 60; // Below this = require puzzle
+      
+      if (finalScore < RISK_THRESHOLD_HIGH) {
         return res.json({
           success: false,
           message: 'Verification failed. Please try again.',
+          riskLevel: 'high',
         });
       }
+      
+      if (finalScore < RISK_THRESHOLD_MEDIUM) {
+        // Escalate to jigsaw puzzle challenge
+        const challengeId = nanoid();
+        const expiresAt = new Date(Date.now() + 120000); // 2 minutes
+        
+        // Create jigsaw puzzle challenge
+        const challenge = await storage.createChallenge({
+          id: challengeId,
+          siteKey: site.key,
+          mode: 'jigsaw',
+          prompt: 'Complete the puzzle to verify',
+          images: [], // Puzzle image will be generated client-side
+          correctIndices: [],
+          isHoneytrap: false,
+          expiresAt,
+        });
+        
+        const challengeToken = generateChallengeToken(challengeId, site.key);
+        
+        return res.json({
+          success: false,
+          requiresChallenge: true,
+          challengeType: 'jigsaw',
+          challengeId: challenge.id,
+          challengeToken,
+          riskScore: finalScore,
+          message: 'Additional verification required',
+        });
+      }
+
+      // Score is good enough for checkbox verification
+      const challengeId = 'turnstile_' + nanoid();
+      
+      // Generate secure Ed25519 JWT token
+      const { generateSecureVerifyToken } = await import('./crypto');
+      const verifyToken = await generateSecureVerifyToken(
+        challengeId,
+        site.key,
+        finalScore,
+        site.secretKey
+      );
+
+      // Store verify token (one token per verification)
+      await storage.createVerifyToken({
+        token: verifyToken,
+        challengeId: challengeId,
+        siteKey: site.key,
+        score: finalScore,
+        used: false,
+        expiresAt: new Date(Date.now() + 120000), // 2 minutes (120 seconds)
+      });
+
+      return res.json({
+        success: true,
+        verifyToken,
+        score: finalScore,
+      });
     } catch (error) {
       console.error('Error in /api/incaptcha/turnstile/verify:', error);
       res.status(500).json({

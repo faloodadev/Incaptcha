@@ -40,7 +40,7 @@ export function calculateBehaviorScore(behaviorVector: BehaviorVector | number[]
   // Handle legacy array format
   if (Array.isArray(behaviorVector)) {
     if (behaviorVector.length === 0) {
-      return 50; // Neutral score if no data
+      return 30; // Lower score if no behavioral data (suspicious)
     }
 
     // Analyze behavioral features (legacy)
@@ -60,22 +60,35 @@ export function calculateBehaviorScore(behaviorVector: BehaviorVector | number[]
 
   // Handle new object format with detailed behavioral signals
   if (!behaviorVector || typeof behaviorVector !== 'object') {
-    return 50; // Neutral score if no data
+    return 30; // Lower score if no behavioral data (suspicious)
   }
 
   let score = 50; // Base score
+  let suspicionFlags = 0; // Track bot-like patterns
 
-  // 1. Mouse trajectory analysis (30 points max)
+  // 1. Mouse trajectory analysis (30 points max) - ENHANCED AI DETECTION
   if (behaviorVector.mouseTrajectory && behaviorVector.mouseTrajectory.length > 0) {
     const trajectory = behaviorVector.mouseTrajectory;
     
+    // Bot detection: Too few samples (instant click)
+    if (trajectory.length < 3) {
+      suspicionFlags += 2;
+      score -= 25;
+    }
+    // Bot detection: Suspiciously many samples (scripted movement)
+    else if (trajectory.length > 100) {
+      suspicionFlags += 1;
+      score -= 10;
+    }
     // Humans have natural mouse movements (5-50 samples is normal)
-    if (trajectory.length >= 5 && trajectory.length <= 50) {
+    else if (trajectory.length >= 5 && trajectory.length <= 50) {
       score += 10;
     }
     
     // Calculate trajectory curvature (humans don't move in perfect straight lines)
     let totalCurvature = 0;
+    let perfectLineSegments = 0;
+    
     for (let i = 1; i < trajectory.length - 1; i++) {
       const prev = trajectory[i - 1];
       const curr = trajectory[i];
@@ -85,6 +98,17 @@ export function calculateBehaviorScore(behaviorVector: BehaviorVector | number[]
       const angle2 = Math.atan2(next.y - curr.y, next.x - curr.x);
       const curvature = Math.abs(angle2 - angle1);
       totalCurvature += curvature;
+      
+      // Bot detection: Perfect straight line segments
+      if (curvature < 0.01) {
+        perfectLineSegments++;
+      }
+    }
+    
+    // Too many perfect segments = bot
+    if (perfectLineSegments > trajectory.length * 0.7) {
+      suspicionFlags += 2;
+      score -= 20;
     }
     
     const avgCurvature = trajectory.length > 2 ? totalCurvature / (trajectory.length - 2) : 0;
@@ -101,14 +125,21 @@ export function calculateBehaviorScore(behaviorVector: BehaviorVector | number[]
     if (timeDiffs.length > 0) {
       const avgTimeDiff = timeDiffs.reduce((a, b) => a + b, 0) / timeDiffs.length;
       const variance = timeDiffs.reduce((sum, diff) => sum + Math.pow(diff - avgTimeDiff, 2), 0) / timeDiffs.length;
+      
+      // Bot detection: Zero variance (perfectly constant timing)
+      if (variance < 1) {
+        suspicionFlags += 2;
+        score -= 20;
+      }
       // Natural variance in timing (not perfectly constant)
-      if (variance > 10 && variance < 10000) {
+      else if (variance > 10 && variance < 10000) {
         score += 10;
       }
     }
   } else {
-    // No mouse data is suspicious for checkbox interaction
-    score -= 20;
+    // No mouse data is highly suspicious for checkbox interaction
+    suspicionFlags += 3;
+    score -= 30;
   }
 
   // 2. Click latency analysis (15 points max)
@@ -152,6 +183,14 @@ export function calculateBehaviorScore(behaviorVector: BehaviorVector | number[]
     }
   }
 
+  // Final AI-powered risk assessment
+  // High suspicion flags should dramatically reduce score
+  if (suspicionFlags >= 3) {
+    score = Math.min(score, 35); // Cap at 35 if highly suspicious
+  } else if (suspicionFlags >= 2) {
+    score = Math.min(score, 55); // Cap at 55 if moderately suspicious
+  }
+  
   return Math.min(100, Math.max(0, Math.round(score)));
 }
 
