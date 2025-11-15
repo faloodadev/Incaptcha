@@ -1,0 +1,127 @@
+You are a senior security engineer. 
+UPDATE my existing captcha system to a modern 2025-grade hybrid security system using ALL the following packages and methods.
+
+Do NOT rebuild from scratch. Maintain my current backend, UI theme, and API flow. Only upgrade security, detection, puzzle fallback, and verification logic.
+
+--------------------------------------------------------------------
+### 🔐 PRIMARY VERIFICATION (Checkbox)
+Add Cloudflare Turnstile checkbox using:
+- @cloudflare/turnstile
+
+--------------------------------------------------------------------
+### 🧠 UPDATED BOT + RISK ENGINE PACKAGES
+Integrate and update the security engine using ALL these packages:
+
+1. Fingerprinting:
+   - @fingerprintjs/fingerprintjs-pro
+   - fingerprintjs2 (fallback)
+
+2. Behavior AI (client-side):
+   - @tensorflow/tfjs-lite
+   - custom anomaly scoring model
+
+3. Browser + bot analysis:
+   - client-detect
+   - ua-parser-js
+   - isbot
+   - bot-shield
+
+4. Device + navigator verification:
+   - detection of headless, webdriver, touch support, mimic scoring
+
+5. Network intelligence:
+   - ip-reputation check (existing or custom)
+   - ASN lookup using asn-db or similar
+
+This risk engine must output:
+- risk_score
+- risk_level = low | medium | high
+- recommended_action = allow | soft_puzzle | hard_puzzle
+
+--------------------------------------------------------------------
+### 🧩 PUZZLE FALLBACK (Same style as screenshot)
+Update system to show a puzzle challenge when suspicious. Use ALL updated puzzle libraries:
+
+- konva (canvas-based draggable puzzle pieces)
+- pixi.js (optional GPU accelerated rendering)
+- hammerjs (gesture + drag support)
+- animejs (snap animation, highlight effects)
+- panzoom (for optional zoom & pan)
+
+Puzzle must support:
+- 3–5 jigsaw pieces
+- snapping animation
+- random piece rotation (optional)
+- success animation (glow/snap)
+
+Puzzle difficulty:
+- soft puzzle for medium risk
+- hard puzzle for high risk
+
+--------------------------------------------------------------------
+### 🔧 BACKEND UPDATES (Node.js)
+Update backend using these packages:
+
+- express (keep existing)
+- node-fetch (Turnstile verification)
+- jose (JWT signing & verification)
+- ioredis (store puzzle session state + rate limiting)
+- express-rate-limit (RPS control)
+- helmet (headers security)
+- cors (updated safe config)
+
+Backend must:
+1. verify Turnstile token
+2. calculate risk score
+3. return puzzle challenge if suspicious
+4. validate puzzle solution
+5. generate final verification JWT
+
+--------------------------------------------------------------------
+### 🔒 CRYPTO + HASHING
+Add updated security hashing:
+
+- WebCrypto API (SHA-256 hash for device fingerprint)
+- SubtleCrypto for token signing (where applicable)
+
+--------------------------------------------------------------------
+### 📦 WHAT TO UPDATE EXACTLY
+1. Update frontend:
+   - Turnstile embed
+   - behavior AI collector
+   - fingerprint generator
+   - puzzle modal (Konva + AnimeJS)
+   - updated request flow
+
+2. Update backend:
+   - Turnstile verification
+   - risk scoring model
+   - puzzle challenge issuing
+   - puzzle verification endpoint
+   - JWT final verification
+
+3. Update security:
+   - rate limits
+   - IP intelligence
+   - fingerprint hashing
+   - session handling (Redis)
+
+--------------------------------------------------------------------
+### ❗ DO NOT REMOVE
+Do NOT remove or overwrite:
+- my existing backend architecture
+- my existing UI/UX theme
+- my existing API endpoints
+Just enhance and upgrade using the above tech.
+
+--------------------------------------------------------------------
+### 📤 FINAL OUTPUT REQUIRED
+Provide updated versions of:
+- Frontend embed code
+- Updated JS with all new libraries
+- Updated puzzle system
+- Updated backend routes
+- Updated verification JWT logic
+- Updated security flowchart
+
+Name the final upgraded system: **InCaptcha Shield v2025 — Update Build**
