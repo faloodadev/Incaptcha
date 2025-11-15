@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -13,10 +14,10 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { TurnstileCheckbox } from "@/components/incaptcha/TurnstileCheckbox";
 import { useToast } from "@/hooks/use-toast";
 import { CheckCircle, Lock, Mail, ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
+import { CheckboxWidget } from "../../../packages/incaptch/src/CheckboxWidget";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -29,6 +30,8 @@ export default function DemoLogin() {
   const [verifyToken, setVerifyToken] = useState<string | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const { toast } = useToast();
+  const widgetContainerRef = useRef<HTMLDivElement>(null);
+  const widgetInstanceRef = useRef<CheckboxWidget | null>(null);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -37,6 +40,38 @@ export default function DemoLogin() {
       password: "",
     },
   });
+
+  // Initialize the incaptch CheckboxWidget
+  useEffect(() => {
+    if (widgetContainerRef.current && !widgetInstanceRef.current) {
+      widgetInstanceRef.current = new CheckboxWidget('incaptcha-checkbox-container', {
+        siteKey: 'demo_site_key',
+        onVerify: (token: string) => {
+          setVerifyToken(token);
+          toast({
+            title: "Verification Successful",
+            description: "You can now proceed with login",
+          });
+        },
+        onError: (error: string) => {
+          toast({
+            title: "Verification Error",
+            description: error,
+            variant: "destructive",
+          });
+        },
+        theme: 'light',
+        apiBaseUrl: ''
+      });
+    }
+
+    return () => {
+      if (widgetInstanceRef.current) {
+        widgetInstanceRef.current.destroy();
+        widgetInstanceRef.current = null;
+      }
+    };
+  }, [toast]);
 
   const onSubmit = async (data: LoginFormValues) => {
     if (!verifyToken) {
@@ -54,22 +89,6 @@ export default function DemoLogin() {
     });
     
     setIsLoggedIn(true);
-  };
-
-  const handleSuccess = (token: string) => {
-    setVerifyToken(token);
-    toast({
-      title: "Verification Successful",
-      description: "You can now proceed with login",
-    });
-  };
-
-  const handleError = (error: string) => {
-    toast({
-      title: "Verification Error",
-      description: error,
-      variant: "destructive",
-    });
   };
 
   if (isLoggedIn) {
@@ -134,7 +153,7 @@ export default function DemoLogin() {
           <CardHeader>
             <CardTitle className="text-2xl">Demo Login</CardTitle>
             <CardDescription>
-              Experience InCaptcha checkbox verification in a real login form
+              Experience InCaptcha checkbox verification using the incaptch package
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -187,11 +206,11 @@ export default function DemoLogin() {
                 />
 
                 <div className="pt-2">
-                  <TurnstileCheckbox
-                    siteKey="demo_site_key"
-                    onSuccess={handleSuccess}
-                    onError={handleError}
-                  />
+                  {/* InCaptcha Checkbox Widget Container */}
+                  <div 
+                    id="incaptcha-checkbox-container" 
+                    ref={widgetContainerRef}
+                  ></div>
                 </div>
 
                 <Button
@@ -204,7 +223,7 @@ export default function DemoLogin() {
                 </Button>
 
                 <p className="text-xs text-center text-muted-foreground mt-4">
-                  This is a demo page. Any email/password combination will work once captcha is verified.
+                  Using <code className="bg-muted px-1 py-0.5 rounded">incaptch</code> package with API key: <code className="bg-muted px-1 py-0.5 rounded">demo_site_key</code>
                 </p>
               </form>
             </Form>
