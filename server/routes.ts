@@ -177,25 +177,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Calculate scores
-      const semanticScore = calculateSemanticScore(
-        selectedIndices,
-        challenge.correctIndices as number[],
-        challenge.isHoneytrap || false
-      );
+      // Calculate scores based on challenge mode
+      let semanticScore: number;
+      let behaviorScore: number;
+      let deviceTrustScore: number;
+      let finalScore: number;
 
-      const behaviorScore = calculateBehaviorScore(behaviorVector);
-      const deviceTrustScore = calculateDeviceTrustScore(userAgent, ipAddress);
+      if (challenge.mode === 'jigsaw') {
+        // For jigsaw puzzles, the accuracy is passed in selectedIndices[0]
+        const puzzleAccuracy = selectedIndices.length > 0 ? selectedIndices[0] : 0;
+        
+        // Puzzle accuracy is the primary score (0-100)
+        semanticScore = Math.min(100, Math.max(0, puzzleAccuracy));
+        
+        // Still check behavioral patterns
+        behaviorScore = calculateBehaviorScore(behaviorVector);
+        deviceTrustScore = calculateDeviceTrustScore(userAgent, ipAddress);
+        
+        // Weight puzzle accuracy heavily (70%), behavior (20%), device (10%)
+        finalScore = Math.round(
+          semanticScore * 0.7 +
+          behaviorScore * 0.2 +
+          deviceTrustScore * 0.1
+        );
+      } else {
+        // Standard image selection challenge
+        semanticScore = calculateSemanticScore(
+          selectedIndices,
+          challenge.correctIndices as number[],
+          challenge.isHoneytrap || false
+        );
 
-      // Fuse scores
-      const finalScore = fuseBehavioralScores(
-        behaviorScore,
-        semanticScore,
-        deviceTrustScore
-      );
+        behaviorScore = calculateBehaviorScore(behaviorVector);
+        deviceTrustScore = calculateDeviceTrustScore(userAgent, ipAddress);
 
-      // Determine success (threshold: 75)
-      const success = finalScore >= 75;
+        // Fuse scores with standard weights
+        finalScore = fuseBehavioralScores(
+          behaviorScore,
+          semanticScore,
+          deviceTrustScore
+        );
+      }
+
+      // Determine success (threshold: 70 for jigsaw, 75 for images)
+      const successThreshold = challenge.mode === 'jigsaw' ? 70 : 75;
+      const success = finalScore >= successThreshold;
 
       // Check if suspicious
       const flaggedSuspicious = shouldFlagSuspicious(

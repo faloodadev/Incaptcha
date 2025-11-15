@@ -227,11 +227,14 @@ export function TurnstileCheckbox({ onSuccess, onError, siteKey = 'demo_site_key
     if (!challengeData) return;
 
     try {
-      const response = await apiRequest<{ success: boolean; verifyToken?: string }>('POST', '/api/incaptcha/solve', {
+      // Convert accuracy (0-1 range) to a score multiplier
+      const accuracyScore = Math.round(accuracy * 100);
+      
+      const response = await apiRequest<{ success: boolean; verifyToken?: string; score?: number }>('POST', '/api/incaptcha/solve', {
         challengeId: challengeData.challengeId,
         challengeToken: challengeData.challengeToken,
-        selectedIndices: [accuracy], // Assuming accuracy is a single value for now
-        behaviorVector: getBehaviorVector(), // Capture behavior during puzzle
+        selectedIndices: [accuracyScore],
+        behaviorVector: getBehaviorVector(),
       });
 
       if (response.success && response.verifyToken) {
@@ -239,11 +242,21 @@ export function TurnstileCheckbox({ onSuccess, onError, siteKey = 'demo_site_key
         onSuccess?.(response.verifyToken);
       } else {
         setState('error');
-        onError?.('Puzzle verification failed');
+        onError?.(response.message || 'Puzzle verification failed');
+        // Auto-reset after 2 seconds
+        setTimeout(() => {
+          setState('idle');
+          delete (window as any).__jigsawChallengeData;
+        }, 2000);
       }
     } catch (error) {
       setState('error');
       onError?.('Puzzle verification failed');
+      // Auto-reset after 2 seconds
+      setTimeout(() => {
+        setState('idle');
+        delete (window as any).__jigsawChallengeData;
+      }, 2000);
     }
   }, [getBehaviorVector, onSuccess, onError]);
 
@@ -268,49 +281,68 @@ export function TurnstileCheckbox({ onSuccess, onError, siteKey = 'demo_site_key
   // Show jigsaw puzzle if challenge required
   if (state === 'challenge') {
     const challengeData = (window as any).__jigsawChallengeData;
-    // Dynamically import JigsawPuzzle component to avoid loading it unless needed
-    // In a real application, ensure JigsawPuzzle component is correctly implemented and imported
-    const JigsawPuzzle = ({ challengeId, challengeToken, onComplete, onRefresh }: any) => {
-      // This is a placeholder for the actual JigsawPuzzle component.
-      // It should render the puzzle UI and call onComplete with an accuracy score.
-      // For demonstration, we'll simulate a successful completion.
-      console.log("Rendering JigsawPuzzle for:", challengeId, challengeToken);
-      useEffect(() => {
-        // Simulate puzzle completion after a delay
-        const timer = setTimeout(() => {
-          console.log("Simulating puzzle completion...");
-          onComplete(0.95); // Simulate high accuracy
-        }, 3000);
-        return () => clearTimeout(timer);
-      }, [onComplete]);
+    
+    const SimplePuzzle = ({ onComplete, onRefresh }: any) => {
+      const [isCompleting, setIsCompleting] = useState(false);
+
+      const handleSolve = () => {
+        setIsCompleting(true);
+        // Simulate puzzle solving with high accuracy (90-95%)
+        const accuracy = 0.90 + Math.random() * 0.05;
+        setTimeout(() => {
+          onComplete(accuracy);
+        }, 500);
+      };
 
       return (
-        <div className="flex flex-col items-center justify-center p-8 bg-white dark:bg-card rounded-lg shadow-lg">
-          <h2 className="text-lg font-semibold mb-4">Complete the Puzzle</h2>
-          <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">Slide the piece to match the pattern.</p>
-          <div className="w-48 h-48 bg-gray-300 dark:bg-gray-700 rounded-md flex items-center justify-center text-gray-500">
-            [Puzzle Area]
+        <div className="inline-block">
+          <div className="w-full max-w-[300px] bg-[#f9fafb] dark:bg-card border border-[#d4d9e3] dark:border-border rounded shadow-sm">
+            <div className="p-6 text-center">
+              <h3 className="text-sm font-semibold text-foreground mb-2">
+                Additional Verification Required
+              </h3>
+              <p className="text-xs text-muted-foreground mb-4">
+                Complete the puzzle to verify you're human
+              </p>
+              
+              <div className="bg-gradient-to-br from-primary/5 to-secondary/5 rounded-lg p-8 mb-4">
+                <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                  <div className="w-16 h-16 border-2 border-dashed border-primary/30 rounded-lg flex items-center justify-center">
+                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={handleSolve}
+                disabled={isCompleting}
+                className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+              >
+                {isCompleting ? 'Verifying...' : 'Complete Puzzle'}
+              </button>
+              
+              <button
+                onClick={onRefresh}
+                className="mt-2 text-xs text-muted-foreground hover:text-foreground underline"
+              >
+                Try checkbox again
+              </button>
+            </div>
           </div>
-          <p className="mt-4 text-xs text-gray-500">Risk Score: {challengeData?.riskScore?.toFixed(2)}</p>
-          <button
-            onClick={onRefresh}
-            className="mt-6 px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600 text-sm"
-          >
-            Refresh
-          </button>
         </div>
       );
     };
 
     return (
-      <div className="inline-block">
-        <JigsawPuzzle
-          challengeId={challengeData?.challengeId || ''}
-          challengeToken={challengeData?.challengeToken || ''}
-          onComplete={handleJigsawComplete}
-          onRefresh={() => setState('idle')} // Reset to idle to re-initiate verification flow
-        />
-      </div>
+      <SimplePuzzle
+        onComplete={handleJigsawComplete}
+        onRefresh={() => {
+          setState('idle');
+          delete (window as any).__jigsawChallengeData;
+        }}
+      />
     );
   }
 
