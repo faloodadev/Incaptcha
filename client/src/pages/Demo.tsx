@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { InCaptchaWidget } from '@/components/incaptcha/InCaptchaWidget';
 import { TurnstileCheckbox } from '@/components/incaptcha/TurnstileCheckbox';
-import { ImageGridCaptcha } from '@/components/incaptcha/ImageGridCaptcha';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Card } from '@/components/ui/card';
@@ -74,8 +73,8 @@ export default function Demo() {
               >
                 <div className="relative">
                   <div className="absolute inset-0 bg-gradient-to-br from-primary to-secondary rounded-lg blur-md opacity-50" />
-                  <div className="relative bg-gradient-to-br from-primary to-secondary p-2 rounded-lg">
-                    <Shield className="w-5 h-5 text-white" />
+                  <div className="relative bg-white dark:bg-white p-2 rounded-lg">
+                    <img src="/incaptcha.png" alt="InCaptcha" className="w-5 h-5" />
                   </div>
                 </div>
                 <span className="text-lg font-bold gradient-text">InCaptcha</span>
@@ -187,36 +186,18 @@ export default function Demo() {
             </p>
           </div>
 
-          {/* Two CAPTCHA Types Side-by-Side */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-            {/* Turnstile Checkbox */}
-            <div className="flex flex-col items-center">
-              <h3 className="text-lg font-semibold mb-4 text-foreground">Turnstile Checkbox</h3>
-              <div className="bg-[#e8ebef] dark:bg-card/30 rounded-lg p-6 inline-block">
-                <div className="text-sm text-muted-foreground mb-4 max-w-xs text-center">
-                  Before you proceed, please complete the captcha below.
-                </div>
-                <TurnstileCheckbox
-                  siteKey="demo_site_key"
-                  onSuccess={handleSuccess}
-                  onError={handleError}
-                />
+          {/* Turnstile Checkbox */}
+          <div className="flex flex-col items-center mb-8">
+            <h3 className="text-lg font-semibold mb-4 text-foreground">Turnstile Checkbox</h3>
+            <div className="bg-[#e8ebef] dark:bg-card/30 rounded-lg p-6 inline-block">
+              <div className="text-sm text-muted-foreground mb-4 max-w-xs text-center">
+                Before you proceed, please complete the captcha below.
               </div>
-            </div>
-
-            {/* Image Grid CAPTCHA */}
-            <div className="flex flex-col items-center">
-              <h3 className="text-lg font-semibold mb-4 text-foreground">Image Grid CAPTCHA</h3>
-              <div className="bg-[#e8ebef] dark:bg-card/30 rounded-lg p-6 inline-block">
-                <div className="text-sm text-muted-foreground mb-4 max-w-xs text-center">
-                  Before you proceed, please complete the captcha below.
-                </div>
-                <ImageGridCaptcha
-                  siteKey="demo_site_key"
-                  onSuccess={handleSuccess}
-                  onError={handleError}
-                />
-              </div>
+              <TurnstileCheckbox
+                siteKey="demo_site_key"
+                onSuccess={handleSuccess}
+                onError={handleError}
+              />
             </div>
           </div>
 
