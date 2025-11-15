@@ -16,8 +16,8 @@ export function calculateSemanticScore(
   const correctSet = new Set(correctIndices);
   
   // Intersection over union (Jaccard similarity)
-  const intersection = new Set([...selectedSet].filter(x => correctSet.has(x)));
-  const union = new Set([...selectedSet, ...correctSet]);
+  const intersection = new Set(Array.from(selectedSet).filter(x => correctSet.has(x)));
+  const union = new Set([...Array.from(selectedSet), ...Array.from(correctSet)]);
   
   const similarity = intersection.size / union.size;
   

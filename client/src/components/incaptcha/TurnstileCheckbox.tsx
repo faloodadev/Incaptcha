@@ -268,7 +268,7 @@ export function TurnstileCheckbox({ onSuccess, onError, siteKey = 'demo_site_key
               <img 
                 src="/incaptcha.png" 
                 alt="InCaptcha" 
-                className="h-5 w-auto opacity-60"
+                className="h-7 w-auto opacity-80"
               />
             </motion.div>
           </div>
@@ -294,11 +294,11 @@ export function TurnstileCheckbox({ onSuccess, onError, siteKey = 'demo_site_key
             Terms
           </button>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2">
           <img 
             src="/incaptcha.png" 
             alt="InCaptcha" 
-            className="h-3 w-auto opacity-50"
+            className="h-4 w-auto opacity-70"
           />
           <span className="text-[11px] font-medium text-[#4a5466] dark:text-muted-foreground">
             InCaptcha
