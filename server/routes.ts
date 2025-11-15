@@ -36,14 +36,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Seed assets on startup
   seedAssets().catch(console.error);
 
-  // Ensure default site key exists
+  // Ensure default site key exists with Ed25519 keys
   const defaultSiteKey = await storage.getSiteKey('demo_site_key');
   if (!defaultSiteKey) {
+    const { generateEd25519KeyPair } = await import('./crypto');
+    const { publicKey, secretKey } = await generateEd25519KeyPair();
     await storage.createSiteKey({
       key: 'demo_site_key',
+      secretKey,
+      publicKey,
       name: 'Demo Site',
       active: true,
     });
+    console.log('Created demo site key with Ed25519 key pair');
+  } else if (!defaultSiteKey.secretKey || !defaultSiteKey.publicKey) {
+    // Upgrade existing site key with Ed25519 keys
+    const { generateEd25519KeyPair } = await import('./crypto');
+    const { publicKey, secretKey } = await generateEd25519KeyPair();
+    await storage.updateSiteKeyKeys('demo_site_key', secretKey, publicKey);
+    console.log('Updated demo site key with Ed25519 key pair');
   }
 
   // POST /api/incaptcha/start - Start a new challenge
@@ -248,7 +259,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // POST /api/incaptcha/turnstile/verify - Simplified Turnstile-style verification
+  // POST /api/incaptcha/turnstile/verify - Simplified Turnstile-style verification with Ed25519 JWT
   app.post('/api/incaptcha/turnstile/verify', async (req, res) => {
     try {
       const { siteKey, behaviorVector } = req.body;
@@ -263,12 +274,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Validate site key
+      // Validate site key and get secret key
       const site = await storage.getSiteKey(siteKey || 'demo_site_key');
       if (!site || !site.active) {
         return res.status(400).json({
           success: false,
           error: 'Invalid site key',
+        });
+      }
+
+      // Ensure site has secret key configured
+      if (!site.secretKey || !site.publicKey) {
+        return res.status(500).json({
+          success: false,
+          error: 'Site key not properly configured. Please regenerate keys.',
         });
       }
 
@@ -284,11 +303,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Generate a single consistent ID for this verification
         const challengeId = 'turnstile_' + nanoid();
         
-        // Generate verify token with the challengeId
-        const verifyToken = generateVerifyToken(
+        // Generate secure Ed25519 JWT token
+        const { generateSecureVerifyToken } = await import('./crypto');
+        const verifyToken = await generateSecureVerifyToken(
           challengeId,
           site.key,
-          finalScore
+          finalScore,
+          site.secretKey
         );
 
         // Store verify token (one token per verification)
@@ -298,7 +319,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           siteKey: site.key,
           score: finalScore,
           used: false,
-          expiresAt: new Date(Date.now() + 180000), // 180 seconds
+          expiresAt: new Date(Date.now() + 120000), // 2 minutes (120 seconds)
         });
 
         return res.json({
@@ -321,26 +342,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // POST /api/incaptcha/verify - Verify a token
+  // POST /api/incaptcha/verify - Verify a token with Ed25519 JWT (server-side only, public key verification)
   app.post('/api/incaptcha/verify', async (req, res) => {
     try {
       const { verifyToken } = req.body;
 
-      // Verify JWT signature
-      const tokenPayload = verifyVerifyToken(verifyToken);
-      if (!tokenPayload) {
-        return res.json({
+      if (!verifyToken) {
+        return res.status(400).json({
           valid: false,
-          message: 'Invalid token signature',
+          message: 'Verify token is required',
         });
       }
 
-      // Check if token exists in database
+      // Check if token exists in database first
       const storedToken = await storage.getVerifyToken(verifyToken);
       if (!storedToken) {
         return res.json({
           valid: false,
           message: 'Token not found',
+        });
+      }
+
+      // Get site and retrieve public key for verification
+      const site = await storage.getSiteKey(storedToken.siteKey);
+      if (!site || !site.active) {
+        return res.json({
+          valid: false,
+          message: 'Invalid site key',
+        });
+      }
+
+      // Ensure site has public key configured
+      if (!site.publicKey) {
+        return res.status(500).json({
+          valid: false,
+          message: 'Site public key not configured',
+        });
+      }
+
+      // Verify Ed25519 JWT signature using public key (server-side verification)
+      const { verifySecureToken } = await import('./crypto');
+      const tokenPayload = await verifySecureToken(verifyToken, site.publicKey);
+      
+      if (!tokenPayload) {
+        return res.json({
+          valid: false,
+          message: 'Invalid token signature or expired',
         });
       }
 
@@ -367,7 +414,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         valid: true,
         siteKey: storedToken.siteKey,
         score: storedToken.score,
+        challengeId: tokenPayload.challengeId,
         timestamp: storedToken.createdAt,
+        verified: true,
       });
     } catch (error) {
       console.error('Error in /api/incaptcha/verify:', error);

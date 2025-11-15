@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { TurnstileCheckbox } from '@/components/incaptcha/TurnstileCheckbox';
-import { ImageGridCaptcha } from '@/components/incaptcha/ImageGridCaptcha';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { Card } from '@/components/ui/card';
 import { Link } from 'wouter';
@@ -28,14 +27,14 @@ export default function Demo() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-8">
               <Link href="/">
-                <div className="flex items-center gap-2 hover-elevate px-2 py-1 rounded-md transition-all cursor-pointer">
+                <div className="flex items-center gap-3 hover-elevate px-2 py-1 rounded-md transition-all cursor-pointer">
                   <img 
                     src="/incaptcha.png" 
                     alt="InCaptcha" 
-                    className="h-6 w-auto"
+                    className="h-8 w-auto"
                     data-testid="img-logo"
                   />
-                  <span className="text-lg font-semibold text-foreground">InCaptcha</span>
+                  <span className="text-xl font-bold text-foreground">InCaptcha</span>
                 </div>
               </Link>
               
@@ -94,31 +93,16 @@ export default function Demo() {
             </p>
           </div>
 
-          {/* CAPTCHA Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* CAPTCHA Card */}
+          <div className="flex justify-center">
             {/* Turnstile Checkbox */}
-            <Card className="p-6">
-              <h3 className="text-lg font-semibold text-foreground mb-4">Turnstile Checkbox</h3>
-              <div className="bg-muted/50 rounded-lg p-6">
-                <p className="text-sm text-muted-foreground mb-4">
+            <Card className="p-8 w-full max-w-2xl">
+              <h3 className="text-xl font-semibold text-foreground mb-6 text-center">Checkbox Verification</h3>
+              <div className="bg-muted/50 rounded-lg p-8">
+                <p className="text-sm text-muted-foreground mb-6 text-center">
                   Before you proceed, please complete the captcha below.
                 </p>
                 <TurnstileCheckbox
-                  siteKey="demo_site_key"
-                  onSuccess={handleSuccess}
-                  onError={handleError}
-                />
-              </div>
-            </Card>
-
-            {/* Image Grid CAPTCHA */}
-            <Card className="p-6">
-              <h3 className="text-lg font-semibold text-foreground mb-4">Image Grid CAPTCHA</h3>
-              <div className="bg-muted/50 rounded-lg p-6">
-                <p className="text-sm text-muted-foreground mb-4">
-                  Before you proceed, please complete the captcha below.
-                </p>
-                <ImageGridCaptcha
                   siteKey="demo_site_key"
                   onSuccess={handleSuccess}
                   onError={handleError}

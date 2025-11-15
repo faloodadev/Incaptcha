@@ -119,9 +119,11 @@ export const insertRateLimitSchema = createInsertSchema(rateLimits).omit({
 export type InsertRateLimit = z.infer<typeof insertRateLimitSchema>;
 export type RateLimit = typeof rateLimits.$inferSelect;
 
-// Site keys - stores registered sites
+// Site keys - stores registered sites with Ed25519 key pairs
 export const siteKeys = pgTable("site_keys", {
   key: varchar("key").primaryKey(),
+  secretKey: varchar("secret_key"),
+  publicKey: varchar("public_key"),
   name: text("name").notNull(),
   domain: text("domain"),
   active: boolean("active").default(true).notNull(),
