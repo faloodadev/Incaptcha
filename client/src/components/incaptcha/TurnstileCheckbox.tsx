@@ -163,7 +163,11 @@ export function TurnstileCheckbox({ onSuccess, onError, siteKey = 'demo_site_key
                   : { duration: 0.3 }
               }
             >
-              <img src="/incaptcha.png" alt="InCaptcha" className="w-5 h-5" />
+              <svg width="20" height="20" viewBox="0 0 12 12" fill="none">
+                <rect width="12" height="12" rx="2" fill="#4b7cf5" opacity="0.15" />
+                <path d="M0 0 L12 12 L12 0 Z" fill="#4b7cf5" opacity="0.8" />
+                <path d="M0 12 L12 12 L0 0 Z" fill="#2cb77d" opacity="0.8" />
+              </svg>
             </motion.div>
           </div>
         </div>

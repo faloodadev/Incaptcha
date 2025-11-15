@@ -169,8 +169,8 @@ export function InCaptchaWidget({
                 transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-primary to-secondary rounded-lg blur-lg opacity-50" />
-                <div className="relative bg-white dark:bg-white p-1.5 rounded-lg">
-                  <img src="/incaptcha.png" alt="InCaptcha" className="w-6 h-6" />
+                <div className="relative bg-gradient-to-br from-primary to-secondary p-2 rounded-lg">
+                  <Shield className="w-5 h-5 text-white" strokeWidth={2.5} />
                 </div>
               </motion.div>
               <div>
