@@ -53,6 +53,7 @@ export interface IStorage {
   getSiteKey(key: string): Promise<SiteKey | undefined>;
   getAllSiteKeys(): Promise<SiteKey[]>;
   updateSiteKeyKeys(key: string, secretKey: string, publicKey: string): Promise<void>;
+  deleteSiteKey(key: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -219,6 +220,12 @@ export class DatabaseStorage implements IStorage {
     await db
       .update(siteKeys)
       .set({ secretKey, publicKey })
+      .where(eq(siteKeys.key, key));
+  }
+
+  async deleteSiteKey(key: string): Promise<void> {
+    await db
+      .delete(siteKeys)
       .where(eq(siteKeys.key, key));
   }
 }

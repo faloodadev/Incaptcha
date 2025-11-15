@@ -502,6 +502,110 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/keys - Get all API keys
+  app.get('/api/keys', async (req, res) => {
+    try {
+      const keys = await storage.getAllSiteKeys();
+      
+      // Return keys with id mapped to key field
+      res.json(keys.map(k => ({
+        id: k.key,
+        name: k.name,
+        key: k.key,
+        publicKey: k.publicKey,
+        active: k.active,
+        createdAt: k.createdAt,
+      })));
+    } catch (error) {
+      console.error('Error in /api/keys:', error);
+      res.status(500).json({
+        error: 'Failed to fetch API keys',
+      });
+    }
+  });
+
+  // POST /api/keys/create - Create new API key
+  app.post('/api/keys/create', async (req, res) => {
+    try {
+      const { name } = req.body;
+
+      if (!name || typeof name !== 'string' || name.length < 1 || name.length > 100) {
+        return res.status(400).json({
+          error: 'Invalid name: must be between 1 and 100 characters',
+        });
+      }
+
+      // Generate Ed25519 key pair
+      const { generateEd25519KeyPair } = await import('./crypto');
+      const { publicKey, secretKey } = await generateEd25519KeyPair();
+
+      // Generate unique key
+      const key = `sk_${nanoid(32)}`;
+
+      const siteKey = await storage.createSiteKey({
+        key,
+        secretKey,
+        publicKey,
+        name,
+        active: true,
+      });
+
+      // IMPORTANT: Return the secretKey only once on creation
+      // The secretKey should be saved by the client immediately
+      res.json({
+        id: siteKey.key,
+        name: siteKey.name,
+        key: siteKey.key,
+        publicKey: siteKey.publicKey,
+        secretKey: siteKey.secretKey, // Only returned once!
+        active: siteKey.active,
+        createdAt: siteKey.createdAt,
+      });
+    } catch (error) {
+      console.error('Error in /api/keys/create:', error);
+      res.status(500).json({
+        error: 'Failed to create API key',
+      });
+    }
+  });
+
+  // DELETE /api/keys/:id - Delete API key
+  app.delete('/api/keys/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      if (!id) {
+        return res.status(400).json({
+          error: 'Missing key ID',
+        });
+      }
+
+      // Check if key exists
+      const existingKey = await storage.getSiteKey(id);
+      if (!existingKey) {
+        return res.status(404).json({
+          error: 'API key not found',
+        });
+      }
+
+      // Prevent deletion of demo key
+      if (id === 'demo_site_key') {
+        return res.status(400).json({
+          error: 'Cannot delete demo key',
+        });
+      }
+
+      await storage.deleteSiteKey(id);
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error in /api/keys/:id:', error);
+      res.status(500).json({
+        error: 'Failed to delete API key',
+      });
+    }
+  });
+
   // Cleanup expired data periodically
   setInterval(async () => {
     try {
