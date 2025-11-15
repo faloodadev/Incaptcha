@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -17,7 +17,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { CheckCircle, Lock, Mail, ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
-import { CheckboxWidget } from "../../../packages/incaptch/src/CheckboxWidget";
+import { TurnstileCheckbox } from "@/components/incaptcha/TurnstileCheckbox";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -30,8 +30,6 @@ export default function DemoLogin() {
   const [verifyToken, setVerifyToken] = useState<string | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const { toast } = useToast();
-  const widgetContainerRef = useRef<HTMLDivElement>(null);
-  const widgetInstanceRef = useRef<CheckboxWidget | null>(null);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -41,37 +39,21 @@ export default function DemoLogin() {
     },
   });
 
-  // Initialize the incaptch CheckboxWidget
-  useEffect(() => {
-    if (widgetContainerRef.current && !widgetInstanceRef.current) {
-      widgetInstanceRef.current = new CheckboxWidget('incaptcha-checkbox-container', {
-        siteKey: 'demo_site_key',
-        onVerify: (token: string) => {
-          setVerifyToken(token);
-          toast({
-            title: "Verification Successful",
-            description: "You can now proceed with login",
-          });
-        },
-        onError: (error: string) => {
-          toast({
-            title: "Verification Error",
-            description: error,
-            variant: "destructive",
-          });
-        },
-        theme: 'light',
-        apiBaseUrl: ''
-      });
-    }
+  const handleSuccess = (token: string) => {
+    setVerifyToken(token);
+    toast({
+      title: "Verification Successful",
+      description: "You can now proceed with login",
+    });
+  };
 
-    return () => {
-      if (widgetInstanceRef.current) {
-        widgetInstanceRef.current.destroy();
-        widgetInstanceRef.current = null;
-      }
-    };
-  }, [toast]);
+  const handleError = (error: string) => {
+    toast({
+      title: "Verification Error",
+      description: error,
+      variant: "destructive",
+    });
+  };
 
   const onSubmit = async (data: LoginFormValues) => {
     if (!verifyToken) {
@@ -206,11 +188,12 @@ export default function DemoLogin() {
                 />
 
                 <div className="pt-2">
-                  {/* InCaptcha Checkbox Widget Container */}
-                  <div 
-                    id="incaptcha-checkbox-container" 
-                    ref={widgetContainerRef}
-                  ></div>
+                  {/* InCaptcha Checkbox Component */}
+                  <TurnstileCheckbox
+                    siteKey="demo_site_key"
+                    onSuccess={handleSuccess}
+                    onError={handleError}
+                  />
                 </div>
 
                 <Button
