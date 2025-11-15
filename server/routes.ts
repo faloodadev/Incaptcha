@@ -606,11 +606,452 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // POST /api/captcha/checkbox/init - Initialize a checkbox challenge session
+  app.post('/api/captcha/checkbox/init', async (req, res) => {
+    try {
+      const { siteKey } = req.body;
+      const ipAddress = getClientIp(req);
+      const userAgent = req.headers['user-agent'] || '';
+
+      // Check rate limit
+      const rateLimit = await checkRateLimit(ipAddress, 'start');
+      if (!rateLimit.allowed) {
+        return res.status(429).json({
+          error: 'Rate limit exceeded. Please try again later.',
+        });
+      }
+
+      // Validate site key
+      if (!siteKey) {
+        return res.status(400).json({
+          error: 'Site key is required',
+        });
+      }
+
+      const site = await storage.getSiteKey(siteKey);
+      if (!site || !site.active) {
+        await storage.createAuditLog({
+          id: nanoid(),
+          siteKey: siteKey,
+          action: 'checkbox_init',
+          ipAddress,
+          success: false,
+          errorMessage: 'Invalid site key',
+        });
+        return res.status(400).json({
+          error: 'Invalid site key',
+        });
+      }
+
+      // Generate nonce for session
+      const nonce = nanoid(32);
+      const sessionId = nanoid();
+      const expiresAt = new Date(Date.now() + 300000); // 5 minutes
+
+      // Create widget session
+      const session = await storage.createWidgetSession({
+        id: sessionId,
+        siteKey: site.key,
+        nonce,
+        ipAddress,
+        userAgent,
+        expiresAt,
+      });
+
+      await storage.createAuditLog({
+        id: nanoid(),
+        siteKey: site.key,
+        action: 'checkbox_init',
+        ipAddress,
+        success: true,
+      });
+
+      res.json({
+        sessionId: session.id,
+        nonce: session.nonce,
+        expiresAt: session.expiresAt,
+      });
+    } catch (error) {
+      console.error('Error in /api/captcha/checkbox/init:', error);
+      res.status(500).json({
+        error: 'Failed to initialize checkbox session',
+      });
+    }
+  });
+
+  // POST /api/captcha/checkbox/verify - Verify checkbox interaction
+  app.post('/api/captcha/checkbox/verify', async (req, res) => {
+    try {
+      const { nonce, behaviorVector } = req.body;
+      const ipAddress = getClientIp(req);
+      const userAgent = req.headers['user-agent'] || '';
+
+      // Check rate limit
+      const rateLimit = await checkRateLimit(ipAddress, 'solve');
+      if (!rateLimit.allowed) {
+        return res.status(429).json({
+          success: false,
+          error: 'Too many verification attempts. Please wait before trying again.',
+        });
+      }
+
+      if (!nonce) {
+        return res.status(400).json({
+          success: false,
+          error: 'Nonce is required',
+        });
+      }
+
+      // Get session by nonce
+      const session = await storage.getWidgetSessionByNonce(nonce);
+      if (!session) {
+        await storage.createAuditLog({
+          id: nanoid(),
+          siteKey: null,
+          action: 'checkbox_verify',
+          ipAddress,
+          success: false,
+          errorMessage: 'Session not found',
+        });
+        return res.status(404).json({
+          success: false,
+          error: 'Session not found',
+        });
+      }
+
+      // Check if expired
+      if (new Date(session.expiresAt) < new Date()) {
+        await storage.createAuditLog({
+          id: nanoid(),
+          siteKey: session.siteKey,
+          action: 'checkbox_verify',
+          ipAddress,
+          success: false,
+          errorMessage: 'Session expired',
+        });
+        return res.status(400).json({
+          success: false,
+          error: 'Session has expired',
+        });
+      }
+
+      // Check if already verified
+      if (session.verified) {
+        await storage.createAuditLog({
+          id: nanoid(),
+          siteKey: session.siteKey,
+          action: 'checkbox_verify',
+          ipAddress,
+          success: false,
+          errorMessage: 'Session already verified',
+        });
+        return res.status(400).json({
+          success: false,
+          error: 'Session already verified',
+        });
+      }
+
+      // Get site key
+      const site = await storage.getSiteKey(session.siteKey);
+      if (!site || !site.active || !site.secretKey) {
+        await storage.createAuditLog({
+          id: nanoid(),
+          siteKey: session.siteKey,
+          action: 'checkbox_verify',
+          ipAddress,
+          success: false,
+          errorMessage: 'Site configuration error',
+        });
+        return res.status(500).json({
+          success: false,
+          error: 'Site configuration error',
+        });
+      }
+
+      // Calculate behavior score with server-side validation
+      const behaviorScore = calculateBehaviorScore(behaviorVector);
+      const deviceTrustScore = calculateDeviceTrustScore(userAgent, ipAddress);
+      const finalScore = Math.round((behaviorScore * 0.6) + (deviceTrustScore * 0.4));
+
+      // Require minimum score threshold
+      if (finalScore < 60) {
+        await storage.createAuditLog({
+          id: nanoid(),
+          siteKey: session.siteKey,
+          action: 'checkbox_verify',
+          ipAddress,
+          success: false,
+          errorMessage: 'Score too low',
+          metadata: { score: finalScore },
+        });
+        return res.status(400).json({
+          success: false,
+          error: 'Verification failed. Please try again.',
+        });
+      }
+
+      // Generate verify token
+      const { generateSecureVerifyToken } = await import('./crypto');
+      const challengeId = 'checkbox_' + nanoid();
+      const verifyToken = await generateSecureVerifyToken(
+        challengeId,
+        site.key,
+        finalScore,
+        site.secretKey
+      );
+
+      // Store verify token
+      await storage.createVerifyToken({
+        token: verifyToken,
+        challengeId,
+        siteKey: site.key,
+        score: finalScore,
+        used: false,
+        expiresAt: new Date(Date.now() + 120000), // 2 minutes
+      });
+
+      // Update session
+      await storage.updateWidgetSession(session.id, {
+        verified: true,
+        verifyToken,
+        challengeId,
+      });
+
+      await storage.createAuditLog({
+        id: nanoid(),
+        siteKey: site.key,
+        action: 'checkbox_verify',
+        ipAddress,
+        success: true,
+        metadata: { score: finalScore },
+      });
+
+      res.json({
+        success: true,
+        verifyToken,
+        score: finalScore,
+      });
+    } catch (error) {
+      console.error('Error in /api/captcha/checkbox/verify:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to verify checkbox',
+      });
+    }
+  });
+
+  // POST /api/captcha/token/introspect - Introspect a verify token
+  app.post('/api/captcha/token/introspect', async (req, res) => {
+    try {
+      const { token, apiKey, secretKey } = req.body;
+
+      if (!token) {
+        return res.status(400).json({
+          valid: false,
+          error: 'Token is required',
+        });
+      }
+
+      // Authenticate request (API key or secret key)
+      let authenticated = false;
+      let clientApiKey: string | undefined;
+
+      if (apiKey && secretKey) {
+        const client = await storage.getApiClient(apiKey);
+        if (client && client.active) {
+          const bcrypt = await import('bcryptjs');
+          const valid = await bcrypt.compare(secretKey, client.secretKeyHash);
+          if (valid) {
+            authenticated = true;
+            clientApiKey = apiKey;
+            await storage.updateApiClientLastUsed(apiKey);
+          }
+        }
+      }
+
+      if (!authenticated) {
+        await storage.createAuditLog({
+          id: nanoid(),
+          apiKey: clientApiKey,
+          action: 'token_introspect',
+          ipAddress: getClientIp(req),
+          success: false,
+          errorMessage: 'Unauthorized',
+        });
+        return res.status(401).json({
+          valid: false,
+          error: 'Unauthorized',
+        });
+      }
+
+      // Get token from storage
+      const storedToken = await storage.getVerifyToken(token);
+      if (!storedToken) {
+        await storage.createAuditLog({
+          id: nanoid(),
+          apiKey: clientApiKey,
+          action: 'token_introspect',
+          ipAddress: getClientIp(req),
+          success: false,
+          errorMessage: 'Token not found',
+        });
+        return res.json({
+          valid: false,
+          error: 'Token not found',
+        });
+      }
+
+      // Verify token signature
+      const site = await storage.getSiteKey(storedToken.siteKey);
+      if (!site || !site.publicKey) {
+        return res.json({
+          valid: false,
+          error: 'Site key not found',
+        });
+      }
+
+      const { verifySecureToken } = await import('./crypto');
+      const tokenPayload = await verifySecureToken(token, site.publicKey);
+
+      if (!tokenPayload) {
+        return res.json({
+          valid: false,
+          error: 'Invalid token signature',
+        });
+      }
+
+      // Check if used or expired
+      const isUsed = storedToken.used;
+      const isExpired = new Date(storedToken.expiresAt) < new Date();
+
+      await storage.createAuditLog({
+        id: nanoid(),
+        apiKey: clientApiKey,
+        action: 'token_introspect',
+        ipAddress: getClientIp(req),
+        success: true,
+        metadata: { tokenValid: !isUsed && !isExpired },
+      });
+
+      res.json({
+        valid: !isUsed && !isExpired,
+        token: {
+          challengeId: tokenPayload.challengeId,
+          siteKey: storedToken.siteKey,
+          score: storedToken.score,
+          used: isUsed,
+          expired: isExpired,
+          createdAt: storedToken.createdAt,
+          expiresAt: storedToken.expiresAt,
+        },
+      });
+    } catch (error) {
+      console.error('Error in /api/captcha/token/introspect:', error);
+      res.status(500).json({
+        valid: false,
+        error: 'Failed to introspect token',
+      });
+    }
+  });
+
+  // GET /api/clients - Get all API clients
+  app.get('/api/clients', async (req, res) => {
+    try {
+      const clients = await storage.getAllApiClients();
+      
+      res.json(clients.map(c => ({
+        id: c.id,
+        apiKey: c.apiKey,
+        name: c.name,
+        domain: c.domain,
+        rateLimitPerHour: c.rateLimitPerHour,
+        active: c.active,
+        createdAt: c.createdAt,
+        lastUsedAt: c.lastUsedAt,
+      })));
+    } catch (error) {
+      console.error('Error in /api/clients:', error);
+      res.status(500).json({
+        error: 'Failed to fetch API clients',
+      });
+    }
+  });
+
+  // POST /api/clients - Create a new API client
+  app.post('/api/clients', async (req, res) => {
+    try {
+      const { name, domain, rateLimitPerHour } = req.body;
+
+      if (!name || typeof name !== 'string' || name.length < 1) {
+        return res.status(400).json({
+          error: 'Name is required',
+        });
+      }
+
+      const bcrypt = await import('bcryptjs');
+      
+      // Generate API key and secret
+      const apiKey = `ic_${nanoid(32)}`;
+      const secretKey = nanoid(48);
+      const secretKeyHash = await bcrypt.hash(secretKey, 10);
+
+      const client = await storage.createApiClient({
+        id: nanoid(),
+        apiKey,
+        secretKeyHash,
+        name,
+        domain: domain || null,
+        rateLimitPerHour: rateLimitPerHour || 1000,
+        active: true,
+      });
+
+      // Return secret key only once
+      res.json({
+        id: client.id,
+        apiKey: client.apiKey,
+        secretKey, // Only returned once!
+        name: client.name,
+        domain: client.domain,
+        rateLimitPerHour: client.rateLimitPerHour,
+        active: client.active,
+        createdAt: client.createdAt,
+      });
+    } catch (error) {
+      console.error('Error in /api/clients:', error);
+      res.status(500).json({
+        error: 'Failed to create API client',
+      });
+    }
+  });
+
+  // DELETE /api/clients/:id - Delete an API client
+  app.delete('/api/clients/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      if (!id) {
+        return res.status(400).json({
+          error: 'Client ID is required',
+        });
+      }
+
+      await storage.deleteApiClient(id);
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error in /api/clients/:id:', error);
+      res.status(500).json({
+        error: 'Failed to delete API client',
+      });
+    }
+  });
+
   // Cleanup expired data periodically
   setInterval(async () => {
     try {
       await storage.deleteExpiredChallenges();
       await storage.deleteExpiredTokens();
+      await storage.deleteExpiredWidgetSessions();
     } catch (error) {
       console.error('Error cleaning up expired data:', error);
     }

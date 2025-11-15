@@ -232,14 +232,21 @@ export default function Demo() {
               Ready to integrate InCaptcha into your application?
             </p>
             <div className="flex flex-wrap justify-center gap-4">
+              <Link href="/demo-login">
+                <Button size="lg" data-testid="button-demo-login">
+                  Try Demo Login
+                </Button>
+              </Link>
               <Link href="/admin">
-                <Button size="lg" data-testid="button-get-started">
+                <Button size="lg" variant="outline" data-testid="button-get-started">
                   View Dashboard
                 </Button>
               </Link>
-              <Button size="lg" variant="outline" data-testid="button-documentation">
-                Documentation
-              </Button>
+              <Link href="/docs">
+                <Button size="lg" variant="outline" data-testid="button-documentation">
+                  Documentation
+                </Button>
+              </Link>
             </div>
           </Card>
         </motion.div>

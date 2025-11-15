@@ -136,3 +136,76 @@ export const insertSiteKeySchema = createInsertSchema(siteKeys).omit({
 
 export type InsertSiteKey = z.infer<typeof insertSiteKeySchema>;
 export type SiteKey = typeof siteKeys.$inferSelect;
+
+// API clients - stores API keys for programmatic access
+export const apiClients = pgTable("api_clients", {
+  id: varchar("id").primaryKey(),
+  apiKey: varchar("api_key").notNull().unique(),
+  secretKeyHash: varchar("secret_key_hash").notNull(),
+  name: text("name").notNull(),
+  domain: text("domain"),
+  rateLimitPerHour: integer("rate_limit_per_hour").default(1000).notNull(),
+  active: boolean("active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  lastUsedAt: timestamp("last_used_at"),
+}, (table) => ({
+  apiKeyIdx: index("api_clients_api_key_idx").on(table.apiKey),
+}));
+
+export const insertApiClientSchema = createInsertSchema(apiClients).omit({
+  createdAt: true,
+});
+
+export type InsertApiClient = z.infer<typeof insertApiClientSchema>;
+export type ApiClient = typeof apiClients.$inferSelect;
+
+// Widget sessions - stores checkbox challenge sessions
+export const widgetSessions = pgTable("widget_sessions", {
+  id: varchar("id").primaryKey(),
+  siteKey: varchar("site_key").notNull(),
+  nonce: varchar("nonce").notNull().unique(),
+  fingerprintHash: varchar("fingerprint_hash"),
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  challengeId: varchar("challenge_id"),
+  verified: boolean("verified").default(false).notNull(),
+  verifyToken: varchar("verify_token"),
+  metadata: jsonb("metadata").$type<Record<string, any>>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+}, (table) => ({
+  nonceIdx: index("widget_sessions_nonce_idx").on(table.nonce),
+  siteKeyIdx: index("widget_sessions_site_key_idx").on(table.siteKey),
+  expiresAtIdx: index("widget_sessions_expires_at_idx").on(table.expiresAt),
+}));
+
+export const insertWidgetSessionSchema = createInsertSchema(widgetSessions).omit({
+  createdAt: true,
+});
+
+export type InsertWidgetSession = z.infer<typeof insertWidgetSessionSchema>;
+export type WidgetSession = typeof widgetSessions.$inferSelect;
+
+// Audit logs - tracks API usage and security events
+export const auditLogs = pgTable("audit_logs", {
+  id: varchar("id").primaryKey(),
+  apiKey: varchar("api_key"),
+  siteKey: varchar("site_key"),
+  action: varchar("action", { length: 50 }).notNull(),
+  ipAddress: varchar("ip_address"),
+  success: boolean("success").notNull(),
+  errorMessage: text("error_message"),
+  metadata: jsonb("metadata").$type<Record<string, any>>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  apiKeyIdx: index("audit_logs_api_key_idx").on(table.apiKey),
+  siteKeyIdx: index("audit_logs_site_key_idx").on(table.siteKey),
+  createdAtIdx: index("audit_logs_created_at_idx").on(table.createdAt),
+}));
+
+export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({
+  createdAt: true,
+});
+
+export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
+export type AuditLog = typeof auditLogs.$inferSelect;

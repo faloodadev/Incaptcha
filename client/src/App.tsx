@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import Demo from "@/pages/Demo";
+import DemoLogin from "@/pages/DemoLogin";
 import Admin from "@/pages/Admin";
 import Docs from "@/pages/Docs";
 import Keys from "@/pages/Keys";
@@ -14,6 +15,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Demo} />
+      <Route path="/demo-login" component={DemoLogin} />
       <Route path="/admin" component={Admin} />
       <Route path="/docs" component={Docs} />
       <Route path="/api-reference" component={Docs} />

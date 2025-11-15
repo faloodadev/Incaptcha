@@ -5,6 +5,9 @@ import {
   assets,
   rateLimits,
   siteKeys,
+  apiClients,
+  widgetSessions,
+  auditLogs,
   type Challenge,
   type InsertChallenge,
   type VerificationAttempt,
@@ -17,6 +20,12 @@ import {
   type InsertRateLimit,
   type SiteKey,
   type InsertSiteKey,
+  type ApiClient,
+  type InsertApiClient,
+  type WidgetSession,
+  type InsertWidgetSession,
+  type AuditLog,
+  type InsertAuditLog,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, desc } from "drizzle-orm";
@@ -54,6 +63,25 @@ export interface IStorage {
   getAllSiteKeys(): Promise<SiteKey[]>;
   updateSiteKeyKeys(key: string, secretKey: string, publicKey: string): Promise<void>;
   deleteSiteKey(key: string): Promise<void>;
+
+  // API Clients
+  createApiClient(client: InsertApiClient): Promise<ApiClient>;
+  getApiClient(apiKey: string): Promise<ApiClient | undefined>;
+  getAllApiClients(): Promise<ApiClient[]>;
+  updateApiClientLastUsed(apiKey: string): Promise<void>;
+  deleteApiClient(id: string): Promise<void>;
+
+  // Widget Sessions
+  createWidgetSession(session: InsertWidgetSession): Promise<WidgetSession>;
+  getWidgetSession(id: string): Promise<WidgetSession | undefined>;
+  getWidgetSessionByNonce(nonce: string): Promise<WidgetSession | undefined>;
+  updateWidgetSession(id: string, updates: Partial<InsertWidgetSession>): Promise<void>;
+  deleteExpiredWidgetSessions(): Promise<void>;
+
+  // Audit Logs
+  createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
+  getAuditLogsByApiKey(apiKey: string, limit?: number): Promise<AuditLog[]>;
+  getRecentAuditLogs(limit: number): Promise<AuditLog[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -227,6 +255,104 @@ export class DatabaseStorage implements IStorage {
     await db
       .delete(siteKeys)
       .where(eq(siteKeys.key, key));
+  }
+
+  // API Clients
+  async createApiClient(insertClient: InsertApiClient): Promise<ApiClient> {
+    const [client] = await db
+      .insert(apiClients)
+      .values(insertClient)
+      .returning();
+    return client;
+  }
+
+  async getApiClient(apiKey: string): Promise<ApiClient | undefined> {
+    const [client] = await db
+      .select()
+      .from(apiClients)
+      .where(eq(apiClients.apiKey, apiKey));
+    return client || undefined;
+  }
+
+  async getAllApiClients(): Promise<ApiClient[]> {
+    return db.select().from(apiClients);
+  }
+
+  async updateApiClientLastUsed(apiKey: string): Promise<void> {
+    await db
+      .update(apiClients)
+      .set({ lastUsedAt: new Date() })
+      .where(eq(apiClients.apiKey, apiKey));
+  }
+
+  async deleteApiClient(id: string): Promise<void> {
+    await db
+      .delete(apiClients)
+      .where(eq(apiClients.id, id));
+  }
+
+  // Widget Sessions
+  async createWidgetSession(insertSession: InsertWidgetSession): Promise<WidgetSession> {
+    const [session] = await db
+      .insert(widgetSessions)
+      .values(insertSession)
+      .returning();
+    return session;
+  }
+
+  async getWidgetSession(id: string): Promise<WidgetSession | undefined> {
+    const [session] = await db
+      .select()
+      .from(widgetSessions)
+      .where(eq(widgetSessions.id, id));
+    return session || undefined;
+  }
+
+  async getWidgetSessionByNonce(nonce: string): Promise<WidgetSession | undefined> {
+    const [session] = await db
+      .select()
+      .from(widgetSessions)
+      .where(eq(widgetSessions.nonce, nonce));
+    return session || undefined;
+  }
+
+  async updateWidgetSession(id: string, updates: Partial<InsertWidgetSession>): Promise<void> {
+    await db
+      .update(widgetSessions)
+      .set(updates)
+      .where(eq(widgetSessions.id, id));
+  }
+
+  async deleteExpiredWidgetSessions(): Promise<void> {
+    await db
+      .delete(widgetSessions)
+      .where(lte(widgetSessions.expiresAt, new Date()));
+  }
+
+  // Audit Logs
+  async createAuditLog(insertLog: InsertAuditLog): Promise<AuditLog> {
+    const [log] = await db
+      .insert(auditLogs)
+      .values(insertLog)
+      .returning();
+    return log;
+  }
+
+  async getAuditLogsByApiKey(apiKey: string, limit: number = 100): Promise<AuditLog[]> {
+    return db
+      .select()
+      .from(auditLogs)
+      .where(eq(auditLogs.apiKey, apiKey))
+      .orderBy(desc(auditLogs.createdAt))
+      .limit(limit);
+  }
+
+  async getRecentAuditLogs(limit: number): Promise<AuditLog[]> {
+    return db
+      .select()
+      .from(auditLogs)
+      .orderBy(desc(auditLogs.createdAt))
+      .limit(limit);
   }
 }
 
