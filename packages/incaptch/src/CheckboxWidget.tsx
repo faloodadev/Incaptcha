@@ -210,7 +210,7 @@ function CheckboxComponent({ siteKey, onVerify, onError, theme = 'light', apiBas
             </div>
 
             <img 
-              src="https://i.imgur.com/your-logo.png" 
+              src="/incaptcha.png" 
               alt="InCaptcha" 
               style={{ height: '32px', width: 'auto' }}
             />
