@@ -1,6 +1,7 @@
+
 # InCaptcha - Checkbox Verification Library
 
-The official JavaScript/TypeScript library for InCaptcha checkbox verification.
+The official JavaScript/TypeScript library for InCaptcha checkbox verification. Works with any framework or vanilla JavaScript!
 
 ## Installation
 
@@ -10,106 +11,164 @@ npm install incaptch
 
 ## Quick Start
 
-### React Integration
+### Vanilla JavaScript / HTML
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <title>My Site</title>
+</head>
+<body>
+  <h1>Login</h1>
+  <form id="login-form">
+    <input type="email" placeholder="Email" required />
+    <input type="password" placeholder="Password" required />
+    
+    <!-- InCaptcha Widget Container -->
+    <div id="incaptcha-widget"></div>
+    
+    <button type="submit">Sign In</button>
+  </form>
+
+  <script type="module">
+    import { CheckboxWidget } from 'incaptch';
+
+    const widget = new CheckboxWidget('incaptcha-widget', {
+      siteKey: 'your_site_key_here',
+      onVerify: (token) => {
+        console.log('Verification token:', token);
+        // Send token to your backend
+        document.getElementById('login-form').submit();
+      },
+      onError: (error) => {
+        console.error('Captcha error:', error);
+      },
+      theme: 'light', // or 'dark'
+      apiBaseUrl: '' // optional, defaults to same origin
+    });
+  </script>
+</body>
+</html>
+```
+
+### React
 
 ```tsx
 import { CheckboxWidget } from 'incaptch';
+import { useEffect, useRef } from 'react';
 
 function LoginForm() {
-  const handleVerify = (token: string) => {
-    console.log('Verification token:', token);
-    // Send token to your backend for validation
-  };
+  const containerRef = useRef<HTMLDivElement>(null);
+  const widgetRef = useRef<CheckboxWidget | null>(null);
 
-  const handleError = (error: string) => {
-    console.error('Captcha error:', error);
-  };
+  useEffect(() => {
+    if (containerRef.current && !widgetRef.current) {
+      widgetRef.current = new CheckboxWidget('incaptcha-container', {
+        siteKey: 'your_site_key_here',
+        onVerify: (token) => {
+          console.log('Token:', token);
+          // Submit your form
+        },
+        theme: 'light'
+      });
+    }
+
+    return () => {
+      widgetRef.current?.destroy();
+    };
+  }, []);
 
   return (
     <form>
       <input type="email" placeholder="Email" />
       <input type="password" placeholder="Password" />
-      
-      <CheckboxWidget
-        siteKey="your_site_key_here"
-        onVerify={handleVerify}
-        onError={handleError}
-        theme="light"
-      />
-      
+      <div id="incaptcha-container" ref={containerRef}></div>
       <button type="submit">Sign In</button>
     </form>
   );
 }
 ```
 
-### Vanilla JavaScript
+### Vue.js
 
-```html
-<div id="incaptcha-widget"></div>
+```vue
+<template>
+  <form>
+    <input type="email" placeholder="Email" />
+    <input type="password" placeholder="Password" />
+    <div id="incaptcha-widget"></div>
+    <button type="submit">Sign In</button>
+  </form>
+</template>
 
-<script type="module">
-  import { CheckboxWidget } from 'incaptch';
-  import { createRoot } from 'react-dom/client';
+<script>
+import { CheckboxWidget } from 'incaptch';
 
-  const root = createRoot(document.getElementById('incaptcha-widget'));
-  root.render(
-    <CheckboxWidget
-      siteKey="your_site_key_here"
-      onVerify={(token) => console.log('Token:', token)}
-    />
-  );
+export default {
+  mounted() {
+    this.widget = new CheckboxWidget('incaptcha-widget', {
+      siteKey: 'your_site_key_here',
+      onVerify: (token) => {
+        console.log('Token:', token);
+      },
+      theme: 'dark'
+    });
+  },
+  beforeUnmount() {
+    this.widget?.destroy();
+  }
+}
 </script>
 ```
 
-## API Client
+## Backend Verification
 
-For server-side token verification:
+After receiving the token from the widget, verify it on your backend:
 
-```typescript
-import { InCaptchaAPI } from 'incaptch';
-
-const api = new InCaptchaAPI('https://api.incaptcha.com');
-
-// Introspect a token
-const result = await api.introspectToken({
-  token: verifyToken,
-  apiKey: 'your_api_key',
-  secretKey: 'your_secret_key',
+```javascript
+// Node.js example
+const response = await fetch('https://your-incaptcha-instance.com/api/incaptcha/verify', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ verifyToken: token })
 });
 
+const result = await response.json();
 if (result.valid) {
-  console.log('Token is valid, score:', result.token?.score);
+  // User is verified
+  console.log('Score:', result.score);
 } else {
-  console.log('Token is invalid:', result.error);
+  // Verification failed
+  console.error('Invalid captcha');
 }
 ```
 
-## Configuration
+## API
 
-### CheckboxWidget Props
+### `CheckboxWidget(elementId, options)`
 
-| Prop | Type | Required | Description |
-|------|------|----------|-------------|
-| `siteKey` | string | Yes | Your InCaptcha site key |
-| `onVerify` | (token: string) => void | Yes | Callback when verification succeeds |
-| `onError` | (error: string) => void | No | Callback when an error occurs |
-| `theme` | 'light' \| 'dark' | No | Widget theme (default: 'light') |
-| `apiBaseUrl` | string | No | Custom API base URL |
+Creates a new checkbox widget instance.
 
-## Security Best Practices
+**Parameters:**
+- `elementId` (string): The ID of the HTML element to render the widget in
+- `options` (object):
+  - `siteKey` (string, required): Your InCaptcha site key
+  - `onVerify` (function, optional): Callback called with verification token
+  - `onError` (function, optional): Callback called on errors
+  - `theme` ('light' | 'dark', optional): Widget theme (default: 'light')
+  - `apiBaseUrl` (string, optional): API endpoint URL (default: same origin)
 
-1. **Never expose your secret key** in client-side code
-2. **Always verify tokens server-side** using the token introspection API
-3. **Use HTTPS** for all API requests
-4. **Implement rate limiting** on your backend
-5. **Store API keys securely** in environment variables
+**Methods:**
+- `destroy()`: Unmounts and cleans up the widget
 
-## Support
+## Getting Your Site Key
 
-- Documentation: https://docs.incaptcha.com
-- API Reference: https://api.incaptcha.com/docs
-- Issues: https://github.com/incaptcha/incaptch/issues
+1. Sign up at your InCaptcha instance
+2. Navigate to the Keys page
+3. Create a new site key
+4. Copy the site key (starts with `sk_...`)
+5. **Save the secret key** - it's shown only once!
 
 ## License
 
