@@ -480,27 +480,92 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.post('/api/incaptcha/verify', async (request, reply) => {
     try {
       const { verifyToken } = request.body as any;
+      const ipAddress = getClientIp(request);
+
+      // Rate limit verification attempts (prevent brute force)
+      const rateLimit = await checkRateLimit(ipAddress, 'solve');
+      if (!rateLimit.allowed) {
+        return reply.status(429).send({
+          valid: false,
+          message: 'Too many verification attempts. Please try again later.',
+        });
+      }
 
       if (!verifyToken) {
+        await storage.createAuditLog({
+          id: nanoid(),
+          action: 'verify_token',
+          ipAddress,
+          success: false,
+          errorMessage: 'Missing token',
+        });
         return reply.status(400).send({
           valid: false,
           message: 'Verify token is required',
         });
       }
 
-      // Check if token exists in database first
+      // CRITICAL: Check if token exists in database FIRST
+      // This prevents attackers from using forged/external tokens
       const storedToken = await storage.getVerifyToken(verifyToken);
       if (!storedToken) {
-        return reply.send({
+        await storage.createAuditLog({
+          id: nanoid(),
+          action: 'verify_token',
+          ipAddress,
+          success: false,
+          errorMessage: 'Token not found in database - possible forgery attempt',
+        });
+        return reply.status(403).send({
           valid: false,
-          message: 'Token not found',
+          message: 'Token not found or invalid',
+        });
+      }
+
+      // Check if token has been used (REPLAY ATTACK PREVENTION)
+      if (storedToken.used) {
+        await storage.createAuditLog({
+          id: nanoid(),
+          siteKey: storedToken.siteKey,
+          action: 'verify_token',
+          ipAddress,
+          success: false,
+          errorMessage: 'Token already used - replay attack attempt',
+        });
+        return reply.status(403).send({
+          valid: false,
+          message: 'Token has already been used',
+        });
+      }
+
+      // Check if token has expired (TIME-BASED SECURITY)
+      if (new Date(storedToken.expiresAt) < new Date()) {
+        await storage.createAuditLog({
+          id: nanoid(),
+          siteKey: storedToken.siteKey,
+          action: 'verify_token',
+          ipAddress,
+          success: false,
+          errorMessage: 'Token expired',
+        });
+        return reply.status(403).send({
+          valid: false,
+          message: 'Token has expired',
         });
       }
 
       // Get site and retrieve public key for verification
       const site = await storage.getSiteKey(storedToken.siteKey);
       if (!site || !site.active) {
-        return reply.send({
+        await storage.createAuditLog({
+          id: nanoid(),
+          siteKey: storedToken.siteKey,
+          action: 'verify_token',
+          ipAddress,
+          success: false,
+          errorMessage: 'Invalid site key',
+        });
+        return reply.status(403).send({
           valid: false,
           message: 'Invalid site key',
         });
@@ -514,35 +579,70 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
         });
       }
 
-      // Verify Ed25519 JWT signature using public key (server-side verification)
+      // Verify Ed25519 JWT signature using public key (CRYPTOGRAPHIC VALIDATION)
       const { verifySecureToken } = await import('./crypto');
       const tokenPayload = await verifySecureToken(verifyToken, site.publicKey);
       
       if (!tokenPayload) {
-        return reply.send({
+        await storage.createAuditLog({
+          id: nanoid(),
+          siteKey: storedToken.siteKey,
+          action: 'verify_token',
+          ipAddress,
+          success: false,
+          errorMessage: 'Invalid cryptographic signature - forgery attempt',
+        });
+        return reply.status(403).send({
           valid: false,
-          message: 'Invalid token signature or expired',
+          message: 'Invalid token signature',
         });
       }
 
-      // Check if token has been used (replay protection)
-      if (storedToken.used) {
-        return reply.send({
+      // Additional validation: Ensure token payload matches stored data
+      if (tokenPayload.challengeId !== storedToken.challengeId || 
+          tokenPayload.siteKey !== storedToken.siteKey) {
+        await storage.createAuditLog({
+          id: nanoid(),
+          siteKey: storedToken.siteKey,
+          action: 'verify_token',
+          ipAddress,
+          success: false,
+          errorMessage: 'Token payload mismatch - tampering detected',
+        });
+        return reply.status(403).send({
           valid: false,
-          message: 'Token has already been used',
+          message: 'Token data inconsistency detected',
         });
       }
 
-      // Check if token has expired
-      if (new Date(storedToken.expiresAt) < new Date()) {
-        return reply.send({
+      // IP ADDRESS BINDING: Verify token is used from same IP that generated it
+      if (storedToken.ipAddress && storedToken.ipAddress !== ipAddress) {
+        await storage.createAuditLog({
+          id: nanoid(),
+          siteKey: storedToken.siteKey,
+          action: 'verify_token',
+          ipAddress,
+          success: false,
+          errorMessage: `IP mismatch - token from ${storedToken.ipAddress}, request from ${ipAddress}`,
+        });
+        return reply.status(403).send({
           valid: false,
-          message: 'Token has expired',
+          message: 'Token cannot be used from different IP address',
         });
       }
 
-      // Mark token as used
+      // Mark token as used (SINGLE-USE ENFORCEMENT)
       await storage.markTokenAsUsed(verifyToken);
+
+      // Log successful verification
+      await storage.createAuditLog({
+        id: nanoid(),
+        siteKey: storedToken.siteKey,
+        action: 'verify_token',
+        ipAddress,
+        success: true,
+        metadata: { score: storedToken.score, challengeId: tokenPayload.challengeId } as any,
+      });
 
       reply.send({
         valid: true,
@@ -554,6 +654,14 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
       });
     } catch (error) {
       console.error('Error in /api/incaptcha/verify:', error);
+      const ipAddress = getClientIp(request);
+      await storage.createAuditLog({
+        id: nanoid(),
+        action: 'verify_token',
+        ipAddress,
+        success: false,
+        errorMessage: 'Server error during verification',
+      });
       reply.status(500).send({
         valid: false,
         message: 'Failed to verify token',
@@ -898,7 +1006,7 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
         site.secretKey
       );
 
-      // Store verify token
+      // Store verify token with IP binding
       await storage.createVerifyToken({
         token: verifyToken,
         challengeId,
@@ -906,6 +1014,7 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
         score: finalScore,
         used: false,
         expiresAt: new Date(Date.now() + 120000), // 2 minutes
+        ipAddress, // Bind token to IP address
       });
 
       // Update session

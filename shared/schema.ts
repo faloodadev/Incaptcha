@@ -62,6 +62,7 @@ export const verifyTokens = pgTable("verify_tokens", {
   siteKey: varchar("site_key").notNull(),
   score: integer("score").notNull(),
   used: boolean("used").default(false).notNull(),
+  ipAddress: varchar("ip_address"), // IP address binding for security
   createdAt: timestamp("created_at").defaultNow().notNull(),
   expiresAt: timestamp("expires_at").notNull(),
 }, (table) => ({
