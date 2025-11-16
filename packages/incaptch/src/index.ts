@@ -1,11 +1,4 @@
 
 export { CheckboxWidget } from './CheckboxWidget';
-export { InCaptchaAPI } from './api';
-export type {
-  InCaptchaConfig,
-  CheckboxOptions,
-  VerifyTokenResponse,
-  SessionResponse,
-  TokenIntrospectRequest,
-  TokenIntrospectResponse,
-} from './types';
+export type { BehaviorVector, VerifyResponse } from './types';
+export * from './api';
