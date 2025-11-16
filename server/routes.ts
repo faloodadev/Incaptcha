@@ -58,6 +58,15 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
     console.log('Updated demo site key with Ed25519 key pair');
   }
 
+  // GET /api/health - Health check endpoint
+  fastify.get('/api/health', async (request, reply) => {
+    return reply.send({ 
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime()
+    });
+  });
+
   // POST /api/incaptcha/start - Start a new challenge
   fastify.post('/api/incaptcha/start', async (request, reply) => {
     try {
