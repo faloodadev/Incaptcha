@@ -27,8 +27,13 @@ interface BehaviorVector {
  * Extract advanced features for AI bot detection
  * Based on research: mouse dynamics, timing patterns, behavioral biometrics
  */
-export function extractAIFeatures(behaviorVector: BehaviorVector): number[] {
+export function extractAIFeatures(behaviorVector: BehaviorVector | undefined | null): number[] {
   const features: number[] = [];
+  
+  // Handle missing or null behaviorVector
+  if (!behaviorVector) {
+    return [0, 0, 0, 0, 0, 0, 0]; // All zeros = suspicious
+  }
   
   // Feature 1-3: Mouse trajectory statistics
   if (behaviorVector.mouseTrajectory && behaviorVector.mouseTrajectory.length > 0) {
@@ -131,7 +136,7 @@ export function predictBotProbability(features: number[]): number {
  * 
  * @returns Score 0-100 (higher = more human-like)
  */
-export function calculateAIBotScore(behaviorVector: BehaviorVector): number {
+export function calculateAIBotScore(behaviorVector: BehaviorVector | undefined | null): number {
   // Extract features for AI model
   const features = extractAIFeatures(behaviorVector);
   
@@ -151,13 +156,22 @@ export function calculateAIBotScore(behaviorVector: BehaviorVector): number {
  * Advanced anomaly detection using statistical methods
  * Detects zero-day bot attacks and novel automation patterns
  */
-export function detectAnomalies(behaviorVector: BehaviorVector): {
+export function detectAnomalies(behaviorVector: BehaviorVector | undefined | null): {
   isAnomaly: boolean;
   anomalyScore: number;
   anomalies: string[];
 } {
   const anomalies: string[] = [];
   let anomalyScore = 0;
+  
+  // Handle missing or null behaviorVector
+  if (!behaviorVector) {
+    return {
+      isAnomaly: true,
+      anomalyScore: 100,
+      anomalies: ['missing_behavior_data'],
+    };
+  }
   
   // Anomaly 1: Perfect timing (constant intervals)
   if (behaviorVector.mouseTrajectory && behaviorVector.mouseTrajectory.length > 5) {
@@ -206,7 +220,7 @@ export function detectAnomalies(behaviorVector: BehaviorVector): {
  * Comprehensive AI-powered bot detection
  * Combines multiple ML techniques for robust detection
  */
-export function comprehensiveAIDetection(behaviorVector: BehaviorVector): {
+export function comprehensiveAIDetection(behaviorVector: BehaviorVector | undefined | null): {
   score: number;
   confidence: number;
   isBot: boolean;
@@ -216,6 +230,20 @@ export function comprehensiveAIDetection(behaviorVector: BehaviorVector): {
     heuristics: number;
   };
 } {
+  // Handle missing or null behaviorVector
+  if (!behaviorVector) {
+    return {
+      score: 30, // Low score for missing behavior data
+      confidence: 95,
+      isBot: true,
+      methods: {
+        aiModel: 30,
+        anomalyDetection: 0,
+        heuristics: 30,
+      },
+    };
+  }
+  
   // Method 1: AI Model Score
   const aiScore = calculateAIBotScore(behaviorVector);
   
