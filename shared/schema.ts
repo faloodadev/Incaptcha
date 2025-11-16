@@ -62,11 +62,12 @@ export const verifyTokens = pgTable("verify_tokens", {
   siteKey: varchar("site_key").notNull(),
   score: integer("score").notNull(),
   used: boolean("used").default(false).notNull(),
-  ipAddress: varchar("ip_address"), // IP address binding for security
+  ipAddress: varchar("ip_address"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   expiresAt: timestamp("expires_at").notNull(),
 }, (table) => ({
   expiresAtIdx: index("verify_tokens_expires_at_idx").on(table.expiresAt),
+  ipAddressIdx: index("verify_tokens_ip_address_idx").on(table.ipAddress),
 }));
 
 export const insertVerifyTokenSchema = createInsertSchema(verifyTokens).omit({

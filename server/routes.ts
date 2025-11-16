@@ -216,14 +216,14 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
       if (challenge.mode === 'jigsaw') {
         // For jigsaw puzzles, the accuracy is passed in selectedIndices[0]
         const puzzleAccuracy = selectedIndices.length > 0 ? selectedIndices[0] : 0;
-        
+
         // Puzzle accuracy is the primary score (0-100)
         semanticScore = Math.min(100, Math.max(0, puzzleAccuracy));
-        
+
         // Still check behavioral patterns
         behaviorScore = calculateBehaviorScore(behaviorVector);
         deviceTrustScore = calculateDeviceTrustScore(userAgent, ipAddress);
-        
+
         // Weight puzzle accuracy heavily (70%), behavior (20%), device (10%)
         finalScore = Math.round(
           semanticScore * 0.7 +
@@ -381,7 +381,7 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
       const behaviorScore = calculateBehaviorScore(behaviorVector);
       const deviceTrustScore = calculateDeviceTrustScore(request.headers['user-agent'] || '', ipAddress);
       const aiDetection = comprehensiveAIDetection(behaviorVector);
-      
+
       // Enhanced fusion for Turnstile-style verification
       // Prioritize AI detection (40%), behavioral analysis (35%), device trust (25%)
       // This multi-layered approach provides robust bot protection
@@ -390,10 +390,10 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
         behaviorScore * 0.35 +
         deviceTrustScore * 0.25
       );
-      
+
       // Log AI detection results for monitoring
       console.log(`AI Detection: score=${aiDetection.score}, confidence=${aiDetection.confidence}, isBot=${aiDetection.isBot}`);
-      
+
       // Risk-based challenge escalation (ENHANCED SECURITY)
       // Stricter thresholds based on Cloudflare Turnstile best practices
       // Score 0-50: Definite bot - fail immediately
@@ -401,7 +401,7 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
       // Score 80-100: High confidence human - allow checkbox pass
       const RISK_THRESHOLD_HIGH = 50; // Below this = fail (increased from 40)
       const RISK_THRESHOLD_MEDIUM = 80; // Below this = require puzzle (increased from 60)
-      
+
       if (finalScore < RISK_THRESHOLD_HIGH) {
         return reply.send({
           success: false,
@@ -409,12 +409,12 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
           riskLevel: 'high',
         });
       }
-      
+
       if (finalScore < RISK_THRESHOLD_MEDIUM) {
         // Escalate to jigsaw puzzle challenge
         const challengeId = nanoid();
         const expiresAt = new Date(Date.now() + 120000); // 2 minutes
-        
+
         // Create jigsaw puzzle challenge
         const challenge = await storage.createChallenge({
           id: challengeId,
@@ -426,9 +426,9 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
           isHoneytrap: false,
           expiresAt,
         });
-        
+
         const challengeToken = generateChallengeToken(challengeId, site.key);
-        
+
         return reply.send({
           success: false,
           requiresChallenge: true,
@@ -442,7 +442,7 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
 
       // Score is good enough for checkbox verification
       const challengeId = 'turnstile_' + nanoid();
-      
+
       // Generate secure Ed25519 JWT token
       const { generateSecureVerifyToken } = await import('./crypto');
       const verifyToken = await generateSecureVerifyToken(
@@ -582,7 +582,7 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
       // Verify Ed25519 JWT signature using public key (CRYPTOGRAPHIC VALIDATION)
       const { verifySecureToken } = await import('./crypto');
       const tokenPayload = await verifySecureToken(verifyToken, site.publicKey);
-      
+
       if (!tokenPayload) {
         await storage.createAuditLog({
           id: nanoid(),
@@ -599,7 +599,7 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
       }
 
       // Additional validation: Ensure token payload matches stored data
-      if (tokenPayload.challengeId !== storedToken.challengeId || 
+      if (tokenPayload.challengeId !== storedToken.challengeId ||
           tokenPayload.siteKey !== storedToken.siteKey) {
         await storage.createAuditLog({
           id: nanoid(),
@@ -712,7 +712,7 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.get('/api/keys', async (request, reply) => {
     try {
       const keys = await storage.getAllSiteKeys();
-      
+
       // Return keys with id mapped to key field
       reply.send(keys.map(k => ({
         id: k.key,
@@ -1165,7 +1165,7 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.get('/api/clients', async (request, reply) => {
     try {
       const clients = await storage.getAllApiClients();
-      
+
       reply.send(clients.map(c => ({
         id: c.id,
         apiKey: c.apiKey,
@@ -1196,7 +1196,7 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
       }
 
       const bcrypt = await import('bcryptjs');
-      
+
       // Generate API key and secret
       const apiKey = `ic_${nanoid(32)}`;
       const secretKey = nanoid(48);
