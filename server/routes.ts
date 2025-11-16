@@ -15,6 +15,7 @@ import {
   fuseBehavioralScores,
   shouldFlagSuspicious,
 } from "./lib/verification";
+import { comprehensiveAIDetection } from "./lib/aiDetection";
 import { checkRateLimit } from "./lib/rateLimit";
 import {
   seedAssets,
@@ -317,18 +318,30 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
         });
       }
 
-      // Calculate behavior score (simpler verification)
+      // Multi-layered AI-powered bot detection (inspired by Cloudflare Bot Management)
       const behaviorScore = calculateBehaviorScore(behaviorVector);
       const deviceTrustScore = calculateDeviceTrustScore(request.headers['user-agent'] || '', ipAddress);
+      const aiDetection = comprehensiveAIDetection(behaviorVector);
       
-      // Simple fusion for Turnstile-style verification
-      const finalScore = Math.round((behaviorScore * 0.5) + (deviceTrustScore * 0.5));
+      // Enhanced fusion for Turnstile-style verification
+      // Prioritize AI detection (40%), behavioral analysis (35%), device trust (25%)
+      // This multi-layered approach provides robust bot protection
+      const finalScore = Math.round(
+        aiDetection.score * 0.40 +
+        behaviorScore * 0.35 +
+        deviceTrustScore * 0.25
+      );
       
-      // Risk-based challenge escalation
-      // If score is between 40-60, require jigsaw puzzle challenge
-      // If score is below 40, likely bot - fail immediately
-      const RISK_THRESHOLD_HIGH = 40; // Below this = fail
-      const RISK_THRESHOLD_MEDIUM = 60; // Below this = require puzzle
+      // Log AI detection results for monitoring
+      console.log(`AI Detection: score=${aiDetection.score}, confidence=${aiDetection.confidence}, isBot=${aiDetection.isBot}`);
+      
+      // Risk-based challenge escalation (ENHANCED SECURITY)
+      // Stricter thresholds based on Cloudflare Turnstile best practices
+      // Score 0-50: Definite bot - fail immediately
+      // Score 50-80: Suspicious - require interactive puzzle challenge
+      // Score 80-100: High confidence human - allow checkbox pass
+      const RISK_THRESHOLD_HIGH = 50; // Below this = fail (increased from 40)
+      const RISK_THRESHOLD_MEDIUM = 80; // Below this = require puzzle (increased from 60)
       
       if (finalScore < RISK_THRESHOLD_HIGH) {
         return reply.send({
