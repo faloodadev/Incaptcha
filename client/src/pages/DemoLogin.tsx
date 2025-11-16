@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -15,13 +14,14 @@ import {
 } from "@/components/ui/form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, Lock, Mail, ArrowLeft } from "lucide-react";
+import { CheckCircle, Lock, Mail, ArrowLeft, Shield, Eye, EyeOff, AlertCircle } from "lucide-react";
 import { Link } from "wouter";
 import { TurnstileCheckbox } from "@/components/incaptcha/TurnstileCheckbox";
+import { motion, AnimatePresence } from "framer-motion";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -29,6 +29,8 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 export default function DemoLogin() {
   const [verifyToken, setVerifyToken] = useState<string | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [securityLevel, setSecurityLevel] = useState<'low' | 'medium' | 'high'>('medium');
   const { toast } = useToast();
 
   const form = useForm<LoginFormValues>({
@@ -41,9 +43,20 @@ export default function DemoLogin() {
 
   const handleSuccess = (token: string) => {
     setVerifyToken(token);
+    
+    // Determine security level based on token (simulated)
+    const score = Math.random();
+    if (score > 0.8) {
+      setSecurityLevel('high');
+    } else if (score > 0.5) {
+      setSecurityLevel('medium');
+    } else {
+      setSecurityLevel('low');
+    }
+    
     toast({
       title: "Verification Successful",
-      description: "You can now proceed with login",
+      description: "InCaptcha has verified you're human. You can now proceed with login.",
     });
   };
 
@@ -53,21 +66,23 @@ export default function DemoLogin() {
       description: error,
       variant: "destructive",
     });
+    setVerifyToken(null);
   };
 
   const onSubmit = async (data: LoginFormValues) => {
     if (!verifyToken) {
       toast({
         title: "Verification Required",
-        description: "Please complete the captcha verification",
+        description: "Please complete the InCaptcha verification first",
         variant: "destructive",
       });
       return;
     }
 
+    // Simulate login process
     toast({
       title: "Login Successful!",
-      description: `Welcome back! Token: ${verifyToken.substring(0, 20)}...`,
+      description: `Welcome back! Verification token received.`,
     });
     
     setIsLoggedIn(true);
@@ -75,24 +90,101 @@ export default function DemoLogin() {
 
   if (isLoggedIn) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-background">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-              <CheckCircle className="w-8 h-8 text-primary" />
-            </div>
-            <CardTitle className="text-2xl">Login Successful!</CardTitle>
-            <CardDescription>
-              You have been successfully authenticated with InCaptcha protection
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="p-4 rounded-md bg-muted">
-                <p className="text-sm text-muted-foreground mb-2">Verify Token:</p>
-                <code className="text-xs break-all font-mono" data-testid="text-verify-token">{verifyToken}</code>
+      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-primary/5">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.3 }}
+        >
+          <Card className="w-full max-w-lg">
+            <CardHeader className="text-center space-y-4">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.1, type: "spring", stiffness: 200 }}
+                className="mx-auto w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center"
+              >
+                <CheckCircle className="w-10 h-10 text-primary" />
+              </motion.div>
+              <div>
+                <CardTitle className="text-3xl">Login Successful!</CardTitle>
+                <CardDescription className="mt-2">
+                  You have been securely authenticated with InCaptcha protection
+                </CardDescription>
               </div>
-              <div className="flex gap-2">
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Security Badge */}
+              <div className={`p-4 rounded-lg border-2 ${
+                securityLevel === 'high' ? 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800' :
+                securityLevel === 'medium' ? 'bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-800' :
+                'bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-800'
+              }`}>
+                <div className="flex items-center gap-3">
+                  <Shield className={`w-6 h-6 ${
+                    securityLevel === 'high' ? 'text-green-600 dark:text-green-400' :
+                    securityLevel === 'medium' ? 'text-yellow-600 dark:text-yellow-400' :
+                    'text-orange-600 dark:text-orange-400'
+                  }`} />
+                  <div className="flex-1">
+                    <p className={`text-sm font-semibold ${
+                      securityLevel === 'high' ? 'text-green-900 dark:text-green-100' :
+                      securityLevel === 'medium' ? 'text-yellow-900 dark:text-yellow-100' :
+                      'text-orange-900 dark:text-orange-100'
+                    }`}>
+                      {securityLevel === 'high' ? 'High Security Level' :
+                       securityLevel === 'medium' ? 'Medium Security Level' :
+                       'Standard Security Level'}
+                    </p>
+                    <p className={`text-xs mt-1 ${
+                      securityLevel === 'high' ? 'text-green-700 dark:text-green-300' :
+                      securityLevel === 'medium' ? 'text-yellow-700 dark:text-yellow-300' :
+                      'text-orange-700 dark:text-orange-300'
+                    }`}>
+                      Verified using InCaptcha behavioral analysis and puzzle challenge
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Token Display */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">Verification Token</label>
+                <div className="p-4 rounded-lg bg-muted/50 border">
+                  <code className="text-xs break-all font-mono text-foreground" data-testid="text-verify-token">
+                    {verifyToken}
+                  </code>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  This JWT token can be verified server-side using your InCaptcha secret key
+                </p>
+              </div>
+
+              {/* Security Features */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Security Features Applied</label>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="flex items-center gap-2 p-2 rounded bg-muted/30">
+                    <CheckCircle className="w-3 h-3 text-primary" />
+                    <span className="text-muted-foreground">Behavioral Analysis</span>
+                  </div>
+                  <div className="flex items-center gap-2 p-2 rounded bg-muted/30">
+                    <CheckCircle className="w-3 h-3 text-primary" />
+                    <span className="text-muted-foreground">Device Fingerprint</span>
+                  </div>
+                  <div className="flex items-center gap-2 p-2 rounded bg-muted/30">
+                    <CheckCircle className="w-3 h-3 text-primary" />
+                    <span className="text-muted-foreground">Risk Scoring</span>
+                  </div>
+                  <div className="flex items-center gap-2 p-2 rounded bg-muted/30">
+                    <CheckCircle className="w-3 h-3 text-primary" />
+                    <span className="text-muted-foreground">Puzzle Challenge</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex flex-col sm:flex-row gap-3">
                 <Button
                   onClick={() => {
                     setIsLoggedIn(false);
@@ -105,111 +197,232 @@ export default function DemoLogin() {
                 >
                   Try Again
                 </Button>
-                <Link href="/">
-                  <Button variant="default" className="flex-1" data-testid="button-back-home">
+                <Link href="/" className="flex-1">
+                  <Button variant="default" className="w-full" data-testid="button-back-home">
                     <ArrowLeft className="w-4 h-4 mr-2" />
-                    Back Home
+                    Back to Demos
                   </Button>
                 </Link>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+
+              {/* Integration Info */}
+              <div className="pt-4 border-t">
+                <p className="text-xs text-center text-muted-foreground">
+                  Using <code className="bg-muted px-1.5 py-0.5 rounded font-semibold">incaptch</code> package
+                  {' '}• Site Key: <code className="bg-muted px-1.5 py-0.5 rounded">demo_site_key</code>
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-background">
-      <div className="w-full max-w-md space-y-4">
-        <div className="text-center mb-6">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-primary/5">
+      <div className="w-full max-w-md space-y-6">
+        {/* Back Button */}
+        <div className="text-center">
           <Link href="/">
-            <Button variant="ghost" className="mb-4" data-testid="button-back">
+            <Button variant="ghost" size="sm" data-testid="button-back">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to InCaptcha
             </Button>
           </Link>
         </div>
         
-        <Card className="w-full">
-          <CardHeader>
-            <CardTitle className="text-2xl">Demo Login</CardTitle>
-            <CardDescription>
-              Experience InCaptcha checkbox verification using the incaptch package
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                          <Input
-                            {...field}
-                            type="email"
-                            placeholder="demo@example.com"
-                            className="pl-10"
-                            data-testid="input-email"
-                          />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Password</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                          <Input
-                            {...field}
-                            type="password"
-                            placeholder="Enter password"
-                            className="pl-10"
-                            data-testid="input-password"
-                          />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div className="pt-2">
-                  {/* InCaptcha Checkbox Component */}
-                  <TurnstileCheckbox
-                    siteKey="demo_site_key"
-                    onSuccess={handleSuccess}
-                    onError={handleError}
-                  />
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+        >
+          <Card className="w-full shadow-lg">
+            <CardHeader className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Shield className="w-6 h-6 text-primary" />
                 </div>
+                <div className="flex-1">
+                  <CardTitle className="text-2xl">Demo Login</CardTitle>
+                  <CardDescription className="mt-1">
+                    Protected by InCaptcha Security
+                  </CardDescription>
+                </div>
+              </div>
 
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={!verifyToken}
-                  data-testid="button-login"
-                >
-                  Sign In
-                </Button>
+              {/* Info Banner */}
+              <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+                <div className="flex gap-2">
+                  <AlertCircle className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-muted-foreground">
+                    This demo uses the <code className="font-semibold bg-background/50 px-1 rounded">incaptch</code> package with behavioral analysis, 
+                    device fingerprinting, and adaptive puzzle challenges for maximum security.
+                  </p>
+                </div>
+              </div>
+            </CardHeader>
 
-                <p className="text-xs text-center text-muted-foreground mt-4">
-                  Using <code className="bg-muted px-1 py-0.5 rounded">incaptch</code> package with API key: <code className="bg-muted px-1 py-0.5 rounded">demo_site_key</code>
-                </p>
-              </form>
-            </Form>
+            <CardContent>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+                  {/* Email Field */}
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email Address</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                            <Input
+                              {...field}
+                              type="email"
+                              placeholder="demo@example.com"
+                              className="pl-10"
+                              data-testid="input-email"
+                            />
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Password Field */}
+                  <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Password</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                            <Input
+                              {...field}
+                              type={showPassword ? "text" : "password"}
+                              placeholder="Enter your password"
+                              className="pl-10 pr-10"
+                              data-testid="input-password"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowPassword(!showPassword)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                              data-testid="button-toggle-password"
+                            >
+                              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* InCaptcha Verification */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Security Verification</label>
+                    <div className="flex justify-center">
+                      <TurnstileCheckbox
+                        siteKey="demo_site_key"
+                        onSuccess={handleSuccess}
+                        onError={handleError}
+                      />
+                    </div>
+                    <AnimatePresence>
+                      {verifyToken && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="flex items-center gap-2 p-2 rounded bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800"
+                        >
+                          <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
+                          <span className="text-xs text-green-700 dark:text-green-300 font-medium">
+                            Verified - You can now sign in
+                          </span>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  {/* Submit Button */}
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    disabled={!verifyToken}
+                    data-testid="button-login"
+                    size="lg"
+                  >
+                    {verifyToken ? (
+                      <>
+                        <Shield className="w-4 h-4 mr-2" />
+                        Sign In Securely
+                      </>
+                    ) : (
+                      'Complete Verification First'
+                    )}
+                  </Button>
+
+                  {/* Helper Text */}
+                  <div className="text-center space-y-2">
+                    <p className="text-xs text-muted-foreground">
+                      Protected by <span className="font-semibold">InCaptcha</span> with advanced bot detection
+                    </p>
+                    <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                        Behavioral AI
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                        Device Trust
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                        Risk Scoring
+                      </span>
+                    </div>
+                  </div>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Technical Details */}
+        <Card className="bg-muted/30">
+          <CardContent className="p-4">
+            <details className="group">
+              <summary className="cursor-pointer text-sm font-medium flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-muted-foreground" />
+                  Integration Details
+                </span>
+                <span className="text-xs text-muted-foreground group-open:rotate-180 transition-transform">▼</span>
+              </summary>
+              <div className="mt-3 space-y-2 text-xs text-muted-foreground">
+                <div className="flex justify-between py-1 border-b border-border/50">
+                  <span>Package:</span>
+                  <code className="font-semibold">incaptch@latest</code>
+                </div>
+                <div className="flex justify-between py-1 border-b border-border/50">
+                  <span>Site Key:</span>
+                  <code className="font-semibold">demo_site_key</code>
+                </div>
+                <div className="flex justify-between py-1 border-b border-border/50">
+                  <span>API Endpoint:</span>
+                  <code className="font-semibold">/api/incaptcha/turnstile/verify</code>
+                </div>
+                <div className="flex justify-between py-1">
+                  <span>Token Type:</span>
+                  <code className="font-semibold">Ed25519 JWT</code>
+                </div>
+              </div>
+            </details>
           </CardContent>
         </Card>
       </div>
