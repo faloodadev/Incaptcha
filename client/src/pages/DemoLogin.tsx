@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -16,8 +17,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { CheckCircle, Lock, Mail, ArrowLeft, Shield, Eye, EyeOff, AlertCircle } from "lucide-react";
 import { Link } from "wouter";
-import { TurnstileCheckbox } from "@/components/incaptcha/TurnstileCheckbox";
 import { motion, AnimatePresence } from "framer-motion";
+import { CheckboxWidget } from "incaptch";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -32,6 +33,8 @@ export default function DemoLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const [securityLevel, setSecurityLevel] = useState<'low' | 'medium' | 'high'>('medium');
   const { toast } = useToast();
+  const captchaContainerRef = useRef<HTMLDivElement>(null);
+  const widgetRef = useRef<CheckboxWidget | null>(null);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -40,6 +43,26 @@ export default function DemoLogin() {
       password: "",
     },
   });
+
+  // Initialize the CheckboxWidget from incaptch package
+  useEffect(() => {
+    if (captchaContainerRef.current && !widgetRef.current && !isLoggedIn) {
+      widgetRef.current = new CheckboxWidget('incaptcha-container', {
+        siteKey: 'demo_site_key',
+        onVerify: handleSuccess,
+        onError: handleError,
+        theme: document.documentElement.classList.contains('dark') ? 'dark' : 'light',
+        apiBaseUrl: '' // Uses same origin
+      });
+    }
+
+    return () => {
+      if (widgetRef.current) {
+        widgetRef.current.destroy();
+        widgetRef.current = null;
+      }
+    };
+  }, [isLoggedIn]);
 
   const handleSuccess = (token: string) => {
     setVerifyToken(token);
@@ -79,13 +102,37 @@ export default function DemoLogin() {
       return;
     }
 
-    // Simulate login process
-    toast({
-      title: "Login Successful!",
-      description: `Welcome back! Verification token received.`,
-    });
-    
-    setIsLoggedIn(true);
+    // Verify the token with the backend
+    try {
+      const response = await fetch('/api/incaptcha/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ verifyToken })
+      });
+
+      const result = await response.json();
+
+      if (result.valid) {
+        toast({
+          title: "Login Successful!",
+          description: `Welcome back! Security score: ${result.score}`,
+        });
+        
+        setIsLoggedIn(true);
+      } else {
+        toast({
+          title: "Verification Failed",
+          description: result.message || "Token validation failed",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to verify captcha token",
+        variant: "destructive",
+      });
+    }
   };
 
   if (isLoggedIn) {
@@ -141,7 +188,7 @@ export default function DemoLogin() {
                       securityLevel === 'medium' ? 'text-yellow-700 dark:text-yellow-300' :
                       'text-orange-700 dark:text-orange-300'
                     }`}>
-                      Verified using InCaptcha behavioral analysis and puzzle challenge
+                      Verified using InCaptcha behavioral analysis
                     </p>
                   </div>
                 </div>
@@ -156,7 +203,7 @@ export default function DemoLogin() {
                   </code>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  This JWT token can be verified server-side using your InCaptcha secret key
+                  This token was verified server-side using the InCaptcha API
                 </p>
               </div>
 
@@ -178,7 +225,7 @@ export default function DemoLogin() {
                   </div>
                   <div className="flex items-center gap-2 p-2 rounded bg-muted/30">
                     <CheckCircle className="w-3 h-3 text-primary" />
-                    <span className="text-muted-foreground">Puzzle Challenge</span>
+                    <span className="text-muted-foreground">Token Verification</span>
                   </div>
                 </div>
               </div>
@@ -257,7 +304,7 @@ export default function DemoLogin() {
                   <AlertCircle className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
                   <p className="text-xs text-muted-foreground">
                     This demo uses the <code className="font-semibold bg-background/50 px-1 rounded">incaptch</code> package with behavioral analysis, 
-                    device fingerprinting, and adaptive puzzle challenges for maximum security.
+                    device fingerprinting, and server-side token verification for maximum security.
                   </p>
                 </div>
               </div>
@@ -322,15 +369,11 @@ export default function DemoLogin() {
                     )}
                   />
 
-                  {/* InCaptcha Verification */}
+                  {/* InCaptcha Verification Widget */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Security Verification</label>
                     <div className="flex justify-center">
-                      <TurnstileCheckbox
-                        siteKey="demo_site_key"
-                        onSuccess={handleSuccess}
-                        onError={handleError}
-                      />
+                      <div id="incaptcha-container" ref={captchaContainerRef}></div>
                     </div>
                     <AnimatePresence>
                       {verifyToken && (
@@ -383,7 +426,7 @@ export default function DemoLogin() {
                       </span>
                       <span className="flex items-center gap-1">
                         <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                        Risk Scoring
+                        Server Validation
                       </span>
                     </div>
                   </div>
@@ -414,12 +457,12 @@ export default function DemoLogin() {
                   <code className="font-semibold">demo_site_key</code>
                 </div>
                 <div className="flex justify-between py-1 border-b border-border/50">
-                  <span>API Endpoint:</span>
-                  <code className="font-semibold">/api/incaptcha/turnstile/verify</code>
+                  <span>Verify Endpoint:</span>
+                  <code className="font-semibold">/api/incaptcha/verify</code>
                 </div>
                 <div className="flex justify-between py-1">
                   <span>Token Type:</span>
-                  <code className="font-semibold">Ed25519 JWT</code>
+                  <code className="font-semibold">HMAC-SHA512 JWT</code>
                 </div>
               </div>
             </details>
