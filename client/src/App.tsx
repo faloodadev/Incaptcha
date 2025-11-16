@@ -5,9 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { PageTransition } from "@/components/PageTransition";
-import { PageLoader } from "@/components/PageLoader";
 import { AnimatePresence } from "framer-motion";
-import { useState, useEffect } from "react";
 import Demo from "@/pages/Demo";
 import DemoLogin from "@/pages/DemoLogin";
 import Admin from "@/pages/Admin";
@@ -17,44 +15,26 @@ import NotFound from "@/pages/not-found";
 
 function Router() {
   const [location] = useLocation();
-  const [isLoading, setIsLoading] = useState(false);
-  const [prevLocation, setPrevLocation] = useState(location);
-
-  useEffect(() => {
-    if (location !== prevLocation) {
-      setIsLoading(true);
-      setPrevLocation(location);
-      
-      const timer = setTimeout(() => {
-        setIsLoading(false);
-      }, 300);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [location, prevLocation]);
   
   return (
-    <>
-      {isLoading && <PageLoader />}
-      <AnimatePresence mode="wait">
-        <PageTransition location={location}>
-          <Switch location={location}>
-            <Route path="/" component={Demo} />
-            <Route path="/demo-login" component={DemoLogin} />
-            <Route path="/admin" component={Admin} />
-            <Route path="/docs" component={Docs} />
-            <Route path="/api-reference" component={Docs} />
-            <Route path="/keys" component={Keys} />
-            <Route path="/pricing" component={Docs} />
-            <Route path="/support" component={Docs} />
-            <Route path="/faq" component={Docs} />
-            <Route path="/terms" component={Docs} />
-            <Route path="/privacy" component={Docs} />
-            <Route component={NotFound} />
-          </Switch>
-        </PageTransition>
-      </AnimatePresence>
-    </>
+    <AnimatePresence mode="wait">
+      <PageTransition location={location}>
+        <Switch location={location}>
+          <Route path="/" component={Demo} />
+          <Route path="/demo-login" component={DemoLogin} />
+          <Route path="/admin" component={Admin} />
+          <Route path="/docs" component={Docs} />
+          <Route path="/api-reference" component={Docs} />
+          <Route path="/keys" component={Keys} />
+          <Route path="/pricing" component={Docs} />
+          <Route path="/support" component={Docs} />
+          <Route path="/faq" component={Docs} />
+          <Route path="/terms" component={Docs} />
+          <Route path="/privacy" component={Docs} />
+          <Route component={NotFound} />
+        </Switch>
+      </PageTransition>
+    </AnimatePresence>
   );
 }
 
