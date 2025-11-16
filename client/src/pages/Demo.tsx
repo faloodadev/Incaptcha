@@ -77,18 +77,18 @@ export default function Demo() {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-6 py-20">
+      <main className="container mx-auto px-4 sm:px-6 py-12 sm:py-20">
         {/* Hero Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="max-w-3xl mb-24"
+          className="max-w-3xl mb-16 sm:mb-24"
         >
-          <h1 className="text-5xl md:text-6xl font-bold text-foreground mb-6 tracking-tight leading-tight">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-4 sm:mb-6 tracking-tight leading-tight">
             Protect Your Site from Bots with incaptcha
           </h1>
-          <p className="text-xl text-muted-foreground mb-8 leading-relaxed">
+          <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-6 sm:mb-8 leading-relaxed">
             Industry-leading CAPTCHA solution for websites and applications.
           </p>
           
@@ -119,9 +119,9 @@ export default function Demo() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2, duration: 0.5 }}
-          className="max-w-5xl mb-24"
+          className="max-w-5xl mb-16 sm:mb-24"
         >
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8">
             {[
               {
                 icon: Puzzle,
@@ -167,32 +167,33 @@ export default function Demo() {
           transition={{ delay: 0.5 }}
           className="max-w-3xl"
         >
-          <h2 className="text-3xl font-bold text-foreground mb-4">Quick Start</h2>
-          <p className="text-muted-foreground mb-6">Embed in in your form</p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-3 sm:mb-4">Quick Start</h2>
+          <p className="text-sm sm:text-base text-muted-foreground mb-4 sm:mb-6">Embed in in your form</p>
           
-          <Card className="relative">
-            <div className="absolute top-4 right-4">
+          <Card className="relative overflow-hidden">
+            <div className="absolute top-3 sm:top-4 right-3 sm:right-4 z-10">
               <Button
                 size="sm"
                 variant="outline"
                 onClick={handleCopy}
                 data-testid="button-copy-code"
+                className="text-xs sm:text-sm"
               >
                 {copied ? (
                   <>
-                    <Check className="w-4 h-4 mr-2" />
-                    Copied
+                    <Check className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">Copied</span>
                   </>
                 ) : (
                   <>
-                    <Copy className="w-4 h-4 mr-2" />
-                    Copy
+                    <Copy className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">Copy</span>
                   </>
                 )}
               </Button>
             </div>
-            <div className="p-6 pt-14">
-              <pre className="text-sm text-foreground font-mono">
+            <div className="p-4 sm:p-6 pt-12 sm:pt-14">
+              <pre className="text-xs sm:text-sm text-foreground font-mono overflow-x-auto">
                 <code>{codeSnippet}</code>
               </pre>
             </div>
@@ -201,10 +202,10 @@ export default function Demo() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-border mt-32">
-        <div className="container mx-auto px-6 py-12">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-            <nav className="flex flex-wrap justify-center gap-6 text-sm">
+      <footer className="border-t border-border mt-16 sm:mt-24 lg:mt-32">
+        <div className="container mx-auto px-4 sm:px-6 py-8 sm:py-12">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4 sm:gap-6">
+            <nav className="flex flex-wrap justify-center gap-3 sm:gap-6 text-xs sm:text-sm">
               <Link href="/docs">
                 <Button variant="ghost" size="sm" data-testid="link-footer-docs">
                   Docs
