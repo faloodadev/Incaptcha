@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import * as anime from 'animejs';
+import anime from 'animejs/lib/anime.es.js';
 import Hammer from 'hammerjs';
 import { Info, Volume2, RotateCw, Shield } from 'lucide-react';
 
