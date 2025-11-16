@@ -6,6 +6,19 @@ InCaptcha is a production-ready, hybrid CAPTCHA verification system that combine
 
 The system uses novel verification methods including semantic image matching, behavioral biometrics tracking, device fingerprinting, and multi-factor scoring to distinguish humans from bots while maintaining excellent accessibility and user experience.
 
+## Recent Changes
+
+### November 2025 - AI Bot Detection & Security Enhancements
+- **Fixed auto-verification issue**: Increased risk thresholds from 60 to 80 to prevent puzzles from disappearing without user interaction
+- **AI-powered bot detection**: Implemented machine learning-based behavioral analysis using TensorFlow.js principles
+- **Multi-layered security**: Enhanced verification with 3-tier detection system:
+  - AI Detection (40% weight): Machine learning model analyzing mouse patterns, timing, and behavioral biometrics
+  - Behavioral Analysis (35% weight): Traditional heuristics for interaction patterns
+  - Device Trust (25% weight): Browser fingerprinting and session consistency
+- **Turnstile-style verification**: Created checkbox captcha with intelligent escalation (inspired by Cloudflare)
+- **Risk-based escalation**: Scores 0-40 fail immediately, 40-80 require puzzle challenge, 80+ pass checkbox
+- **Anomaly detection**: Added statistical methods to detect zero-day bot attacks
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
