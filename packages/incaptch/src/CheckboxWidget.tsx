@@ -1,5 +1,4 @@
-
-import { StrictMode, useState, useCallback, useEffect, useRef } from 'react';
+import React, { StrictMode, useState, useCallback, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 
 interface MouseSample {
