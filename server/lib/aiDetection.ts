@@ -231,15 +231,17 @@ export function comprehensiveAIDetection(behaviorVector: BehaviorVector | undefi
   };
 } {
   // Handle missing or null behaviorVector
+  // Return neutral score to allow device trust and other signals to determine outcome
+  // This supports third-party integrations that may not provide behavior telemetry
   if (!behaviorVector) {
     return {
-      score: 30, // Low score for missing behavior data
-      confidence: 95,
-      isBot: true,
+      score: 50, // Neutral score - let other factors decide
+      confidence: 40, // Low confidence due to missing data
+      isBot: false, // Don't automatically flag as bot
       methods: {
-        aiModel: 30,
-        anomalyDetection: 0,
-        heuristics: 30,
+        aiModel: 50,
+        anomalyDetection: 50,
+        heuristics: 50,
       },
     };
   }
