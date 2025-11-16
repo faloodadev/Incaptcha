@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import anime from 'animejs/lib/anime.es.js';
+// @ts-ignore - animejs has incorrect type definitions
+import animeImport from 'animejs';
+const anime = animeImport.default || animeImport;
 import Hammer from 'hammerjs';
 import { Info, Volume2, RotateCw, Shield } from 'lucide-react';
 
