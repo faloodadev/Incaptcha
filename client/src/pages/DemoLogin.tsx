@@ -47,22 +47,35 @@ export default function DemoLogin() {
   // Initialize the CheckboxWidget from incaptch package
   useEffect(() => {
     if (captchaContainerRef.current && !widgetRef.current && !isLoggedIn) {
-      widgetRef.current = new CheckboxWidget('incaptcha-container', {
-        siteKey: 'demo_site_key',
-        onVerify: handleSuccess,
-        onError: handleError,
-        theme: document.documentElement.classList.contains('dark') ? 'dark' : 'light',
-        apiBaseUrl: '' // Uses same origin
-      });
+      try {
+        widgetRef.current = new CheckboxWidget('incaptcha-container', {
+          siteKey: 'demo_site_key',
+          onVerify: handleSuccess,
+          onError: handleError,
+          theme: document.documentElement.classList.contains('dark') ? 'dark' : 'light',
+          apiBaseUrl: '' // Uses same origin
+        });
+      } catch (error) {
+        console.error('Failed to initialize captcha widget:', error);
+        toast({
+          title: "Initialization Error",
+          description: "Failed to load captcha widget. Please refresh the page.",
+          variant: "destructive",
+        });
+      }
     }
 
     return () => {
       if (widgetRef.current) {
-        widgetRef.current.destroy();
+        try {
+          widgetRef.current.destroy();
+        } catch (error) {
+          console.error('Error destroying widget:', error);
+        }
         widgetRef.current = null;
       }
     };
-  }, [isLoggedIn]);
+  }, [isLoggedIn, toast]);
 
   const handleSuccess = (token: string) => {
     setVerifyToken(token);
@@ -110,6 +123,11 @@ export default function DemoLogin() {
         body: JSON.stringify({ verifyToken })
       });
 
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Verification failed');
+      }
+
       const result = await response.json();
 
       if (result.valid) {
@@ -122,16 +140,31 @@ export default function DemoLogin() {
       } else {
         toast({
           title: "Verification Failed",
-          description: result.message || "Token validation failed",
+          description: result.message || "Token validation failed. Please try again.",
           variant: "destructive",
         });
+        
+        // Reset captcha on failure
+        setVerifyToken(null);
+        if (widgetRef.current) {
+          widgetRef.current.destroy();
+          widgetRef.current = null;
+        }
       }
     } catch (error) {
+      console.error('Verification error:', error);
       toast({
-        title: "Error",
-        description: "Failed to verify captcha token",
+        title: "Verification Error",
+        description: error instanceof Error ? error.message : "Failed to verify captcha token",
         variant: "destructive",
       });
+      
+      // Reset captcha on error
+      setVerifyToken(null);
+      if (widgetRef.current) {
+        widgetRef.current.destroy();
+        widgetRef.current = null;
+      }
     }
   };
 
