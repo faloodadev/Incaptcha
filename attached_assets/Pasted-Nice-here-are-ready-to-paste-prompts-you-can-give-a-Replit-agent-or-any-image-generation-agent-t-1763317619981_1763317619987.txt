@@ -1,0 +1,120 @@
+Nice — here are ready-to-paste prompts you can give a Replit agent (or any image-generation agent) to produce polished website mockups for the incaptcha design. I give two full prompts (one desktop hero mockup, one mobile screenshot), a short/compact prompt for quick runs, recommended generation settings, and a small negative-prompt list to reduce unwanted artefacts.
+
+
+---
+
+Full Desktop Prompt (copy & paste)
+
+Create a high-fidelity desktop website hero mockup for a modern developer-facing CAPTCHA service called incaptcha.
+
+Layout & composition:
+
+Desktop browser viewport (centered card-like page) with generous white space and a subtle rounded container shadow. Canvas ratio about 16:10 (e.g., 1440×900).
+
+Top header: left-aligned “incaptcha” logo (simple wordmark), center/top-right nav items: Docs, Pricing, Support, and a prominent Get API Key rounded rectangular button (green).
+
+Hero area left column: large headline: “Protect Your Site from Bots with incaptcha” (use bold, large type). Subhead under it: “Industry-leading CAPTCHA solution for websites and applications.” A primary CTA button Get Started (green, medium-large). A short 2-bullet list under CTA: “Privacy-first” and “AI-powered challenge”.
+
+Middle/section below hero: three horizontal feature cards/icons: Easy Integration (puzzle icon), Low Latency (chart icon), AI-powered (network icon) with short captions.
+
+Quick Start block: a clean code snippet box showing:
+<script src="https://incaptcha-net.js"></script>
+<div class="incaptcha-widget"></div>
+with a small rounded Copy button at the top-right of the code block.
+
+Footer: minimal links (Docs, FAQ, Terms, Privacy) and small social icons.
+
+Visual style: minimal, modern, developer-friendly. Use system/modern sans (Inter or similar), large readable type scale, generous line-height. Color palette: white background, charcoal text (#111), accent green for CTAs (#0FA77A or similar), blue icons for features. Subtle rounded corners and soft drop shadows.
+
+Micro-interaction cues: include subtle button hover elevation and slight inner shadow for code block.
+
+Accessibility and clarity: high contrast text, obvious visual hierarchy, no clutter.
+
+Render details: clean vector-style icons, flat minimal illustrations, crisp antialiased text.
+
+
+Deliverable: photorealistic UI mockup (not a photograph) — crisp UI screenshot PNG, high resolution, 300 DPI if possible. No watermarks or logos from other brands.
+
+
+---
+
+Full Mobile Prompt (copy & paste)
+
+Create a mobile screenshot mockup for the incaptcha landing/quickstart page.
+
+Layout & composition:
+
+Phone portrait aspect ratio (e.g., 1080×2340 or 393×873 for realistic mobile width). Single column stacked layout.
+
+Compact header with small incaptcha wordmark left and a hamburger icon right. Hero stacked: title “Protect Your Site from Bots with incaptcha”, short subtitle, large full-width primary CTA Get Started (green).
+
+Quick Start snippet appears below hero: a full-width code block with the same snippet and a small copy icon overlay on the right.
+
+Feature cards are stacked vertically (icon then label then tiny caption). Footer shows collapsed links and privacy note.
+
+Visual style consistent with desktop (white background, green CTAs, blue feature icons, modern sans).
+
+Render crisp, legible fonts optimized for mobile.
+
+
+Deliverable: high-quality PNG mobile screenshot, clean UI, no watermarks.
+
+
+---
+
+Compact Prompt (one-line quick prompt)
+
+“Generate a high-resolution desktop UI mockup for a developer product called incaptcha: minimal white hero card with large headline ‘Protect Your Site from Bots with incaptcha’, green CTAs, three feature icons (Easy Integration, Low Latency, AI-powered), a code snippet box with a Copy button, header with Docs/Pricing/Support + Get API Key, and a clean footer. Modern sans UI, flat vector icons, high contrast, PNG, no watermark.”
+
+
+---
+
+Recommended Generation Settings
+
+Aspect ratio / size:
+
+Desktop: 1440×900 (16:10) or 1920×1080 (if you want full HD).
+
+Mobile: 1080×2340 (portrait) or 393×873 for compact.
+
+
+Quality / steps: medium-high (if using configurable sampler): steps 40–60, CFG / guidance 7–9.
+
+Seed: optional—set to a fixed seed if you want reproducible results.
+
+Outputs: 1–3 variations so you can pick the best.
+
+Style: “UI mockup / flat vector / crisp text” (prefer UI/graphic style, not photographic).
+
+
+
+---
+
+Negative prompts (to avoid common issues)
+
+No watermarks, no logos from other companies (Microsoft/Google/Apple), no extra text artifacts, no strange faces, no photorealistic textures, avoid blurred or pixelated text, avoid heavy gradients or neon colors, avoid incorrect code characters or unreadable code.
+
+
+
+---
+
+Extra tips for Replit agent
+
+If Replit agent supports layers or multiple passes, first generate the base layout, then generate a second pass to refine typography and the code-block text so the snippet text stays crisp and legible.
+
+Ask for variations titled “desktop-clean”, “desktop-with-widget-preview”, and “mobile-stacked” to get multiple useful screenshots.
+
+If the agent supports direct CSS hints, include: font-family: Inter, system-ui; border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+
+
+
+---
+
+If you want, I can:
+
+produce a slightly shorter prompt for one-click paste into Replit,
+
+or tweak colors, brand name style (lowercase wordmark vs logomark), or produce three alternative headline options to test in the mockups.
+
+
+Which of those would you like next?
