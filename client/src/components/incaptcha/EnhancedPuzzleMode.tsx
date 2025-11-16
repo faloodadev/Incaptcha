@@ -1,7 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-// @ts-ignore - animejs has incorrect type definitions
-import animeImport from 'animejs';
-const anime = animeImport.default || animeImport;
+import { animate as anime } from 'animejs';
 import Hammer from 'hammerjs';
 import { Info, Volume2, RotateCw, Shield } from 'lucide-react';
 
@@ -341,12 +339,13 @@ export function EnhancedPuzzleMode({ onComplete, onRefresh }: EnhancedPuzzleMode
     if (allPlaced && !isComplete) {
       setIsComplete(true);
       
-      anime({
-        targets: containerRef.current,
-        scale: [1, 1.02, 1],
-        duration: 400,
-        easing: 'easeInOutQuad',
-      });
+      if (containerRef.current) {
+        anime(containerRef.current, {
+          scale: [1, 1.02, 1],
+          duration: 400,
+          easing: 'easeInOutQuad',
+        });
+      }
 
       setTimeout(() => {
         const accuracy = 0.92 + Math.random() * 0.06;
@@ -423,8 +422,7 @@ export function EnhancedPuzzleMode({ onComplete, onRefresh }: EnhancedPuzzleMode
 
               if (distance < SNAP_THRESHOLD) {
                 // Snap animation
-                anime({
-                  targets: { x: p.x, y: p.y },
+                anime({ x: p.x, y: p.y }, {
                   x: p.correctX,
                   y: p.correctY,
                   duration: 250,
