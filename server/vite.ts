@@ -1,10 +1,10 @@
-import express, { type Express } from "express";
+import type { FastifyInstance } from "fastify";
 import fs from "fs";
 import path from "path";
 import { createServer as createViteServer, createLogger } from "vite";
-import { type Server } from "http";
 import viteConfig from "../vite.config";
 import { nanoid } from "nanoid";
+import middie from "@fastify/middie";
 
 const viteLogger = createLogger();
 
@@ -19,12 +19,9 @@ export function log(message: string, source = "express") {
   console.log(`${formattedTime} [${source}] ${message}`);
 }
 
-export async function setupVite(app: Express, server: Server) {
-  const serverOptions = {
-    middlewareMode: true,
-    hmr: { server },
-    allowedHosts: true as const,
-  };
+export async function setupVite(app: FastifyInstance) {
+  // Register middie to enable Express middleware support in Fastify
+  await app.register(middie);
 
   const vite = await createViteServer({
     ...viteConfig,
@@ -36,13 +33,20 @@ export async function setupVite(app: Express, server: Server) {
         process.exit(1);
       },
     },
-    server: serverOptions,
+    server: {
+      middlewareMode: true,
+      hmr: { server: app.server },
+      allowedHosts: true as const,
+    },
     appType: "custom",
   });
 
-  app.use(vite.middlewares);
-  app.use("*", async (req, res, next) => {
-    const url = req.originalUrl;
+  // Use Vite's middlewares
+  await app.use(vite.middlewares);
+  
+  // Catch-all route for SPA
+  app.get('/*', async (request, reply) => {
+    const url = request.url;
 
     try {
       const clientTemplate = path.resolve(
@@ -52,22 +56,22 @@ export async function setupVite(app: Express, server: Server) {
         "index.html",
       );
 
-      // always reload the index.html file from disk incase it changes
+      // Always reload the index.html file from disk in case it changes
       let template = await fs.promises.readFile(clientTemplate, "utf-8");
       template = template.replace(
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`,
       );
       const page = await vite.transformIndexHtml(url, template);
-      res.status(200).set({ "Content-Type": "text/html" }).end(page);
+      reply.type("text/html").send(page);
     } catch (e) {
       vite.ssrFixStacktrace(e as Error);
-      next(e);
+      reply.status(500).send(e);
     }
   });
 }
 
-export function serveStatic(app: Express) {
+export async function serveStatic(app: FastifyInstance) {
   const distPath = path.resolve(import.meta.dirname, "public");
 
   if (!fs.existsSync(distPath)) {
@@ -76,10 +80,16 @@ export function serveStatic(app: Express) {
     );
   }
 
-  app.use(express.static(distPath));
+  // Register @fastify/static plugin
+  await app.register(import("@fastify/static"), {
+    root: distPath,
+    prefix: "/",
+  });
 
-  // fall through to index.html if the file doesn't exist
-  app.use("*", (_req, res) => {
-    res.sendFile(path.resolve(distPath, "index.html"));
+  // Fallback to index.html for SPA routing
+  app.setNotFoundHandler(async (request, reply) => {
+    const indexPath = path.resolve(distPath, "index.html");
+    const stream = fs.createReadStream(indexPath);
+    reply.type("text/html").send(stream);
   });
 }
