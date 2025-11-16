@@ -1,256 +1,264 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { TurnstileCheckbox } from '@/components/incaptcha/TurnstileCheckbox';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { Card } from '@/components/ui/card';
 import { Link } from 'wouter';
-import { Menu, Shield, Zap, Brain, Lock, Key } from 'lucide-react';
+import { Puzzle, TrendingUp, Network, Copy, Check, Twitter, Github, Linkedin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 
 export default function Demo() {
-  const [verifyToken, setVerifyToken] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const { toast } = useToast();
 
-  const handleSuccess = (token: string) => {
-    setVerifyToken(token);
-    console.log('Verification successful! Token:', token);
-  };
+  const codeSnippet = `<script src="https://incaptcha-net.js"></script>
+<div class="incaptcha-widget"></div>`;
 
-  const handleError = (error: string) => {
-    console.error('Verification error:', error);
+  const handleCopy = () => {
+    navigator.clipboard.writeText(codeSnippet);
+    setCopied(true);
+    toast({
+      title: "Copied!",
+      description: "Code snippet copied to clipboard",
+    });
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Clean Header - OpenAI Style */}
+      {/* Header */}
       <header className="border-b border-border sticky top-0 z-50 bg-background/80 backdrop-blur-sm">
-        <div className="container mx-auto px-6 py-3">
+        <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-8">
-              <Link href="/">
-                <div className="flex items-center gap-3 hover-elevate px-2 py-1 rounded-md transition-all cursor-pointer">
-                  <img 
-                    src="/incaptcha.png" 
-                    alt="InCaptcha" 
-                    className="h-8 w-auto"
-                    data-testid="img-logo"
-                  />
-                  <span className="text-xl font-bold text-foreground">InCaptcha</span>
-                </div>
+            <Link href="/">
+              <div className="flex items-center gap-2 hover-elevate px-2 py-1 rounded-md transition-all cursor-pointer">
+                <img 
+                  src="/incaptcha.png" 
+                  alt="incaptcha" 
+                  className="h-6 w-auto"
+                  data-testid="img-logo"
+                />
+                <span className="text-lg font-semibold text-foreground">incaptcha</span>
+              </div>
+            </Link>
+            
+            <nav className="hidden md:flex items-center gap-1">
+              <Link href="/docs">
+                <Button variant="ghost" size="sm" data-testid="link-docs">
+                  Docs
+                </Button>
               </Link>
-              
-              <nav className="hidden md:flex items-center gap-1">
-                <Link href="/docs">
-                  <Button variant="ghost" size="sm" data-testid="link-docs">
-                    Docs
-                  </Button>
-                </Link>
-                <Link href="/api-reference">
-                  <Button variant="ghost" size="sm" data-testid="link-api">
-                    API
-                  </Button>
-                </Link>
-              </nav>
-            </div>
+              <Link href="/pricing">
+                <Button variant="ghost" size="sm" data-testid="link-pricing">
+                  Pricing
+                </Button>
+              </Link>
+              <Link href="/support">
+                <Button variant="ghost" size="sm" data-testid="link-support">
+                  Support
+                </Button>
+              </Link>
+            </nav>
             
             <div className="flex items-center gap-2">
               <Link href="/keys">
-                <Button variant="outline" size="sm" data-testid="button-api-keys">
-                  <Key className="w-4 h-4 mr-2" />
-                  API Keys
+                <Button 
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white" 
+                  size="sm" 
+                  data-testid="button-get-api-key"
+                >
+                  Get API Key
                 </Button>
               </Link>
               <ThemeToggle />
-              <Button variant="ghost" size="sm" className="md:hidden" data-testid="button-menu">
-                <Menu className="w-5 h-5" />
-              </Button>
             </div>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-6 py-16">
-        {/* Hero Section - Clean and Simple */}
+      <main className="container mx-auto px-6 py-20">
+        {/* Hero Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="max-w-4xl mx-auto text-center mb-20"
+          className="max-w-3xl mb-24"
         >
-          <h1 className="text-5xl md:text-6xl font-bold text-foreground mb-6 tracking-tight">
-            InCaptcha Platform
+          <h1 className="text-5xl md:text-6xl font-bold text-foreground mb-6 tracking-tight leading-tight">
+            Protect Your Site from Bots with incaptcha
           </h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            Make your first verification request in minutes. Learn the basics of the InCaptcha platform.
+          <p className="text-xl text-muted-foreground mb-8 leading-relaxed">
+            Industry-leading CAPTCHA solution for websites and applications.
           </p>
-        </motion.div>
-
-        {/* CAPTCHA Verification Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.5 }}
-          className="max-w-6xl mx-auto mb-20"
-        >
-          <div className="mb-10">
-            <h2 className="text-2xl font-semibold text-foreground mb-2">Verification Methods</h2>
-            <p className="text-muted-foreground">
-              Choose from multiple verification types to protect your application.
-            </p>
-          </div>
-
-          {/* CAPTCHA Card */}
-          <div className="flex justify-center">
-            {/* Turnstile Checkbox */}
-            <Card className="p-8 w-full max-w-2xl">
-              <h3 className="text-xl font-semibold text-foreground mb-6 text-center">Checkbox Verification</h3>
-              <div className="bg-muted/50 rounded-lg p-8">
-                <p className="text-sm text-muted-foreground mb-6 text-center">
-                  Before you proceed, please complete the captcha below.
-                </p>
-                <TurnstileCheckbox
-                  siteKey="demo_site_key"
-                  onSuccess={handleSuccess}
-                  onError={handleError}
-                />
-              </div>
-            </Card>
-          </div>
-
-          {/* Verification Token Display */}
-          {verifyToken && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-8"
+          
+          <Link href="/demo-login">
+            <Button 
+              size="lg" 
+              className="bg-emerald-600 hover:bg-emerald-700 text-white mb-6"
+              data-testid="button-get-started"
             >
-              <Card className="p-6">
-                <div className="flex items-start gap-4 mb-4">
-                  <div className="bg-muted p-2 rounded-lg">
-                    <Lock className="w-5 h-5 text-foreground" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-foreground mb-1">
-                      Verification Token
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      Single-use JWT token
-                    </p>
-                  </div>
-                </div>
-
-                <div className="bg-muted/50 rounded-lg p-4 mb-4">
-                  <code className="block font-mono text-sm break-all text-foreground" data-testid="text-verify-token">
-                    {verifyToken}
-                  </code>
-                </div>
-
-                <p className="text-sm text-muted-foreground">
-                  This token can be verified server-side to confirm challenge completion.
-                  Expires in 180 seconds with replay protection.
-                </p>
-              </Card>
-            </motion.div>
-          )}
+              Get Started
+            </Button>
+          </Link>
+          
+          <ul className="space-y-2 text-foreground">
+            <li className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-foreground"></span>
+              Privacy-first
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-foreground"></span>
+              AI-powered challenge
+            </li>
+          </ul>
         </motion.div>
 
-        {/* Features Section with Gradient Cards */}
+        {/* Features Section */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.4, duration: 0.5 }}
-          className="max-w-6xl mx-auto mb-20"
+          transition={{ delay: 0.2, duration: 0.5 }}
+          className="max-w-5xl mb-24"
         >
-          <div className="mb-10">
-            <h2 className="text-2xl font-semibold text-foreground mb-2">Features</h2>
-            <p className="text-muted-foreground">
-              Built for scale, designed for security
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               {
-                icon: Brain,
-                title: 'AI Behavioral Analysis',
-                description: 'Advanced machine learning tracks mouse movements, timing patterns, and interaction behaviors to detect automated bots.',
-                gradient: 'from-pink-500/10 via-orange-500/10 to-yellow-500/10'
+                icon: Puzzle,
+                title: 'Easy Integration',
+                description: 'Quick setup with minimal code',
               },
               {
-                icon: Shield,
-                title: 'Semantic Verification',
-                description: 'Server-side AI validates challenge solutions ensuring genuine human responses while maintaining privacy.',
-                gradient: 'from-purple-500/10 via-pink-500/10 to-purple-500/10'
+                icon: TrendingUp,
+                title: 'Low Latency',
+                description: 'Fast verification process',
               },
               {
-                icon: Zap,
-                title: 'Lightning Fast',
-                description: 'Optimized for performance with response times under 100ms and zero impact on user experience.',
-                gradient: 'from-blue-500/10 via-cyan-500/10 to-teal-500/10'
-              },
-              {
-                icon: Lock,
-                title: 'Cryptographic Security',
-                description: 'JWT-based tokens with HMAC-SHA512 signatures, single-use enforcement, and automatic expiration.',
-                gradient: 'from-green-500/10 via-emerald-500/10 to-teal-500/10'
+                icon: Network,
+                title: 'AI-powered',
+                description: 'Advanced bot detection',
               },
             ].map((feature, index) => (
               <motion.div
                 key={index}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 + index * 0.1 }}
+                transition={{ delay: 0.3 + index * 0.1 }}
+                className="text-center"
               >
-                <Card className="h-full p-6 hover-elevate transition-all duration-300">
-                  <div className={`bg-gradient-to-br ${feature.gradient} rounded-lg p-8 mb-4`}>
-                    <feature.icon className="w-8 h-8 text-foreground" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-foreground mb-2">
-                    {feature.title}
-                  </h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    {feature.description}
-                  </p>
-                </Card>
+                <div className="inline-flex items-center justify-center w-16 h-16 mb-4 rounded-lg bg-blue-500/10">
+                  <feature.icon className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-foreground mb-2">
+                  {feature.title}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {feature.description}
+                </p>
               </motion.div>
             ))}
           </div>
         </motion.div>
 
-        {/* Get Started CTA */}
+        {/* Quick Start Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.8 }}
-          className="max-w-4xl mx-auto text-center"
+          transition={{ delay: 0.5 }}
+          className="max-w-3xl"
         >
-          <Card className="p-12">
-            <h3 className="text-3xl font-bold text-foreground mb-4">
-              Get started
-            </h3>
-            <p className="text-lg text-muted-foreground mb-8">
-              Ready to integrate InCaptcha into your application?
-            </p>
-            <div className="flex flex-wrap justify-center gap-4">
-              <Link href="/demo-login">
-                <Button size="lg" data-testid="button-demo-login">
-                  Try Demo Login
-                </Button>
-              </Link>
-              <Link href="/admin">
-                <Button size="lg" variant="outline" data-testid="button-get-started">
-                  View Dashboard
-                </Button>
-              </Link>
-              <Link href="/docs">
-                <Button size="lg" variant="outline" data-testid="button-documentation">
-                  Documentation
-                </Button>
-              </Link>
+          <h2 className="text-3xl font-bold text-foreground mb-4">Quick Start</h2>
+          <p className="text-muted-foreground mb-6">Embed in in your form</p>
+          
+          <Card className="relative">
+            <div className="absolute top-4 right-4">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleCopy}
+                data-testid="button-copy-code"
+              >
+                {copied ? (
+                  <>
+                    <Check className="w-4 h-4 mr-2" />
+                    Copied
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4 mr-2" />
+                    Copy
+                  </>
+                )}
+              </Button>
+            </div>
+            <div className="p-6 pt-14">
+              <pre className="text-sm text-foreground font-mono">
+                <code>{codeSnippet}</code>
+              </pre>
             </div>
           </Card>
         </motion.div>
       </main>
+
+      {/* Footer */}
+      <footer className="border-t border-border mt-32">
+        <div className="container mx-auto px-6 py-12">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+            <nav className="flex flex-wrap justify-center gap-6 text-sm">
+              <Link href="/docs">
+                <Button variant="ghost" size="sm" data-testid="link-footer-docs">
+                  Docs
+                </Button>
+              </Link>
+              <Link href="/faq">
+                <Button variant="ghost" size="sm" data-testid="link-footer-faq">
+                  FAQ
+                </Button>
+              </Link>
+              <Link href="/terms">
+                <Button variant="ghost" size="sm" data-testid="link-footer-terms">
+                  Terms
+                </Button>
+              </Link>
+              <Link href="/privacy">
+                <Button variant="ghost" size="sm" data-testid="link-footer-privacy">
+                  Privacy
+                </Button>
+              </Link>
+            </nav>
+            
+            <div className="flex items-center gap-4">
+              <a 
+                href="https://twitter.com" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                data-testid="link-twitter"
+              >
+                <Twitter className="w-5 h-5" />
+              </a>
+              <a 
+                href="https://github.com" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                data-testid="link-github"
+              >
+                <Github className="w-5 h-5" />
+              </a>
+              <a 
+                href="https://linkedin.com" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                data-testid="link-linkedin"
+              >
+                <Linkedin className="w-5 h-5" />
+              </a>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
