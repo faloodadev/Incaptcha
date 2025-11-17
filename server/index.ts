@@ -60,15 +60,18 @@ fastify.addHook('onResponse', async (request, reply) => {
 
   // Start server
   const port = parseInt(process.env.PORT || '5000', 10);
-  const host = process.env.NODE_ENV === 'production' ? '0.0.0.0' : '0.0.0.0';
+  const host = '0.0.0.0';
 
   try {
+    console.log(`Starting server on ${host}:${port} in ${process.env.NODE_ENV} mode...`);
     await fastify.listen({
       port,
       host,
     });
+    console.log(`✓ Server successfully started on ${host}:${port}`);
     log(`serving on port ${port} (host: ${host})`);
   } catch (err) {
+    console.error('Failed to start server:', err);
     fastify.log.error(err);
     process.exit(1);
   }
