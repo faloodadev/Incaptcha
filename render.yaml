@@ -3,7 +3,7 @@ services:
     name: rest-express-api
     runtime: node
     buildCommand: npm install && npm run build
-    startCommand: npm run start
+    startCommand: NODE_ENV=production node dist/server/index.js
     envVars:
       - key: NODE_ENV
         value: production
