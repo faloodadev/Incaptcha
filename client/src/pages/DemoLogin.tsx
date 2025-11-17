@@ -15,10 +15,10 @@ import {
 } from "@/components/ui/form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, Lock, Mail, ArrowLeft, Shield, Eye, EyeOff, AlertCircle } from "lucide-react";
+import { CheckCircle, Lock, Mail, ArrowLeft, Shield, Eye, EyeOff, AlertCircle, Loader2 } from "lucide-react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckboxWidget } from "incaptch";
+import { CheckboxWidget, InCaptchaAPI } from "incaptch";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -31,10 +31,12 @@ export default function DemoLogin() {
   const [verifyToken, setVerifyToken] = useState<string | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
   const [securityLevel, setSecurityLevel] = useState<'low' | 'medium' | 'high'>('medium');
   const { toast } = useToast();
   const captchaContainerRef = useRef<HTMLDivElement>(null);
   const widgetRef = useRef<CheckboxWidget | null>(null);
+  const apiRef = useRef<InCaptchaAPI>(new InCaptchaAPI(''));
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -115,32 +117,45 @@ export default function DemoLogin() {
       return;
     }
 
+    setIsVerifying(true);
+    
     // Verify the token with the backend
     try {
       const response = await fetch('/api/incaptcha/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ verifyToken })
+        body: JSON.stringify({ 
+          verifyToken: verifyToken 
+        })
       });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Verification failed');
+        throw new Error(error.error || 'Verification failed');
       }
 
       const result = await response.json();
 
-      if (result.valid) {
+      if (result.valid && result.score !== undefined) {
         toast({
           title: "Login Successful!",
           description: `Welcome back! Security score: ${result.score}`,
         });
         
+        // Determine security level based on score
+        if (result.score > 80) {
+          setSecurityLevel('high');
+        } else if (result.score > 50) {
+          setSecurityLevel('medium');
+        } else {
+          setSecurityLevel('low');
+        }
+        
         setIsLoggedIn(true);
       } else {
         toast({
           title: "Verification Failed",
-          description: result.message || "Token validation failed. Please try again.",
+          description: "Token validation failed. Please try again.",
           variant: "destructive",
         });
         
@@ -165,6 +180,8 @@ export default function DemoLogin() {
         widgetRef.current.destroy();
         widgetRef.current = null;
       }
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -429,11 +446,16 @@ export default function DemoLogin() {
                   <Button
                     type="submit"
                     className="w-full"
-                    disabled={!verifyToken}
+                    disabled={!verifyToken || isVerifying}
                     data-testid="button-login"
                     size="lg"
                   >
-                    {verifyToken ? (
+                    {isVerifying ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Verifying...
+                      </>
+                    ) : verifyToken ? (
                       <>
                         <Shield className="w-4 h-4 mr-2" />
                         Sign In Securely
