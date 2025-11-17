@@ -8,6 +8,13 @@ The system uses novel verification methods including semantic image matching, be
 
 ## Recent Changes
 
+### November 17, 2025 - DemoLogin Integration & Lazy Loading
+- **DemoLogin Page Refactored**: Updated to use CheckboxWidget from incaptch package with proper backend API integration
+- **Lazy Loading Implemented**: All pages now use React.lazy() for code splitting and optimized bundle size
+- **Loading States Added**: PageLoader component with spinner for smooth page transitions using Suspense
+- **API Integration Fixed**: Corrected payload structure for /api/incaptcha/verify endpoint (uses { verifyToken })
+- **Performance Optimized**: Reduced initial bundle size through dynamic imports
+
 ### November 2025 - AI Bot Detection & Security Enhancements
 - **Fixed auto-verification issue**: Increased risk thresholds from 60 to 80 to prevent puzzles from disappearing without user interaction
 - **AI-powered bot detection**: Implemented machine learning-based behavioral analysis using TensorFlow.js principles
