@@ -21,6 +21,15 @@ fi
 echo -e "${GREEN}✓ Dependencies installed${NC}"
 echo ""
 
+# Step 1.5: Build incaptch package
+echo -e "${BLUE}🔨 Building incaptch package...${NC}"
+cd packages/incaptch
+npm install
+npm run build
+cd ../..
+echo -e "${GREEN}✓ incaptch package built${NC}"
+echo ""
+
 # Step 2: Push database schema
 echo -e "${BLUE}🗄️  Setting up database schema...${NC}"
 npm run db:push
