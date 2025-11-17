@@ -43,3 +43,61 @@ export interface TokenIntrospectResponse {
   };
   error?: string;
 }
+
+export interface MouseSample {
+  t: number;
+  x: number;
+  y: number;
+}
+
+export interface BehaviorVector {
+  mouseTrajectory: MouseSample[];
+  clickLatency: number;
+  hoverDuration: number;
+  mouseVelocity: number;
+  timestamp: number;
+  scrollBehavior: { scrollY: number; scrollVelocity: number };
+}
+
+export interface TurnstileVerifyRequest {
+  siteKey: string;
+  behaviorVector: BehaviorVector;
+}
+
+export interface TurnstileVerifyResponse {
+  success: boolean;
+  verifyToken?: string;
+  score?: number;
+  requiresChallenge?: boolean;
+  challengeType?: string;
+  challengeId?: string;
+  challengeToken?: string;
+  riskScore?: number;
+  error?: string;
+}
+
+export interface ChallengeStartRequest {
+  siteKey: string;
+  challengeType?: string;
+}
+
+export interface ChallengeStartResponse {
+  success: boolean;
+  challengeId?: string;
+  challengeData?: any;
+  expiresAt?: string;
+  error?: string;
+}
+
+export interface ChallengeSolveRequest {
+  challengeId: string;
+  solution: any;
+  siteKey: string;
+}
+
+export interface ChallengeSolveResponse {
+  success: boolean;
+  verifyToken?: string;
+  score?: number;
+  error?: string;
+}
