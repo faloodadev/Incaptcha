@@ -27,14 +27,14 @@ fastify.addHook('onRequest', async (request, reply) => {
 fastify.addHook('onResponse', async (request, reply) => {
   const duration = Date.now() - ((request as any).startTime || 0);
   const path = request.url;
-  
+
   if (path.startsWith('/api')) {
     let logLine = `${request.method} ${path} ${reply.statusCode} in ${duration}ms`;
-    
+
     if (logLine.length > 80) {
       logLine = logLine.slice(0, 79) + "…";
     }
-    
+
     log(logLine);
   }
 });
@@ -60,7 +60,7 @@ fastify.addHook('onResponse', async (request, reply) => {
 
   // Start server
   const port = parseInt(process.env.PORT || '5000', 10);
-  
+
   try {
     await fastify.listen({
       port,
