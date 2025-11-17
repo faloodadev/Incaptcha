@@ -60,13 +60,14 @@ fastify.addHook('onResponse', async (request, reply) => {
 
   // Start server
   const port = parseInt(process.env.PORT || '5000', 10);
+  const host = process.env.NODE_ENV === 'production' ? '0.0.0.0' : '0.0.0.0';
 
   try {
     await fastify.listen({
       port,
-      host: "0.0.0.0",
+      host,
     });
-    log(`serving on port ${port}`);
+    log(`serving on port ${port} (host: ${host})`);
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);
